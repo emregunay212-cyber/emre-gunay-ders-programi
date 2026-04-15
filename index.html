@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="theme-color" content="#0f1115" />
+<title>Emre Günay – Ders Programı</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --card: #1a1d24;
+    --card-2: #232730;
+    --text: #e8eaed;
+    --muted: #8a93a6;
+    --border: #2a2f3a;
+
+    --anaokulu: #f5c84c;
+    --ilkokul:  #4ade80;
+    --ortaokul: #60a5fa;
+    --lise:     #ef4444;
+    --toplanti: #fb923c;
+    --amazing:  #c084fc;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.4;
+    min-height: 100vh;
+  }
+
+  .wrap {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 20px 16px 40px;
+  }
+
+  header.top {
+    text-align: center;
+    padding: 8px 0 20px;
+  }
+  .clock {
+    font-size: clamp(48px, 14vw, 72px);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+  }
+  .date {
+    margin-top: 8px;
+    color: var(--muted);
+    font-size: 14px;
+    text-transform: capitalize;
+  }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 18px;
+    margin-bottom: 14px;
+  }
+
+  .label {
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin-bottom: 8px;
+  }
+
+  .ders-baslik {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .ders-ad {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  .badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 9px;
+    border-radius: 999px;
+    border: 1px solid currentColor;
+    background: color-mix(in srgb, currentColor 14%, transparent);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    line-height: 1;
+  }
+  .b-anaokulu { color: var(--anaokulu); }
+  .b-ilkokul  { color: var(--ilkokul); }
+  .b-ortaokul { color: var(--ortaokul); }
+  .b-lise     { color: var(--lise); }
+  .b-toplanti { color: var(--toplanti); }
+  .b-amazing  { color: var(--amazing); }
+
+  .meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-top: 14px;
+    color: var(--muted);
+    font-size: 14px;
+    font-variant-numeric: tabular-nums;
+  }
+  .meta strong {
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  .progress {
+    margin-top: 14px;
+    height: 8px;
+    background: var(--card-2);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .progress > span {
+    display: block;
+    height: 100%;
+    width: 0%;
+    border-radius: 999px;
+    transition: width 0.6s ease;
+    background: currentColor;
+  }
+
+  .next-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+  }
+  .next-info { min-width: 0; }
+  .next-name {
+    font-size: 18px;
+    font-weight: 600;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .next-when {
+    color: var(--muted);
+    font-size: 13px;
+    margin-top: 4px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .empty {
+    text-align: center;
+    padding: 28px 12px;
+    color: var(--muted);
+    font-size: 15px;
+  }
+
+  h2.section-title {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--muted);
+    font-weight: 600;
+    margin: 24px 4px 10px;
+  }
+  .day {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 12px 14px;
+    margin-bottom: 8px;
+  }
+  .day.today {
+    border-color: color-mix(in srgb, var(--text) 35%, var(--border));
+    background: var(--card-2);
+  }
+  .day-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 8px;
+  }
+  .day.today .day-name { color: var(--text); }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    font-size: 12px;
+    padding: 5px 9px;
+    border-radius: 8px;
+    border: 1px solid currentColor;
+    background: color-mix(in srgb, currentColor 12%, transparent);
+    font-variant-numeric: tabular-nums;
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+  .chip .t { color: var(--muted); margin-right: 6px; font-size: 11px; }
+  .chip.now { box-shadow: 0 0 0 2px color-mix(in srgb, currentColor 45%, transparent); }
+  .chip.done { opacity: 0.4; }
+  .day-empty { color: var(--muted); font-size: 12px; font-style: italic; }
+
+  footer {
+    text-align: center;
+    color: var(--muted);
+    font-size: 12px;
+    margin-top: 26px;
+    opacity: 0.7;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="clock" id="clock">--:--:--</div>
+    <div class="date" id="date">—</div>
+  </header>
+
+  <div id="now-area"></div>
+  <div id="next-area"></div>
+
+  <h2 class="section-title">Haftalık Program</h2>
+  <div id="weekly"></div>
+
+  <footer>Bilnet Balıkesir · Bilişim Teknolojileri</footer>
+</div>
+
+<script>
+// All data below is hardcoded constants — no user input is ever rendered.
+const PROGRAM = [
+  { gun: 1, bas: "10:55", bit: "11:25", ad: "KAPLAN",   tip: "anaokulu" },
+  { gun: 1, bas: "11:30", bit: "12:00", ad: "TIMSAH",   tip: "anaokulu" },
+  { gun: 1, bas: "13:20", bit: "13:50", ad: "YUNUS",    tip: "anaokulu" },
+  { gun: 1, bas: "14:00", bit: "14:30", ad: "BALINA",   tip: "anaokulu" },
+  { gun: 2, bas: "10:20", bit: "10:50", ad: "PENGUEN",  tip: "anaokulu" },
+  { gun: 2, bas: "10:55", bit: "11:25", ad: "PANDA",    tip: "anaokulu" },
+  { gun: 2, bas: "11:30", bit: "12:00", ad: "TAVSAN",   tip: "anaokulu" },
+  { gun: 3, bas: "10:05", bit: "10:40", ad: "4/A",      tip: "ilkokul"  },
+  { gun: 3, bas: "10:50", bit: "11:25", ad: "4/A",      tip: "ilkokul"  },
+  { gun: 3, bas: "11:35", bit: "12:10", ad: "4/C",      tip: "ortaokul" },
+  { gun: 3, bas: "12:55", bit: "13:30", ad: "4/C",      tip: "ortaokul" },
+  { gun: 3, bas: "13:45", bit: "14:20", ad: "4/E",      tip: "ilkokul"  },
+  { gun: 3, bas: "14:35", bit: "15:10", ad: "4/E",      tip: "ilkokul"  },
+  { gun: 3, bas: "15:25", bit: "16:10", ad: "Toplanti", tip: "toplanti" },
+  { gun: 4, bas: "10:50", bit: "11:25", ad: "4/B",      tip: "ilkokul"  },
+  { gun: 4, bas: "12:55", bit: "13:30", ad: "4/D",      tip: "ilkokul"  },
+  { gun: 4, bas: "14:35", bit: "15:10", ad: "4/F",      tip: "ilkokul"  },
+  { gun: 5, bas: "16:15", bit: "16:50", ad: "Amazing",  tip: "amazing"  },
+];
+
+// Display names use proper Turkish characters.
+const AD_DISPLAY = {
+  "TIMSAH": "TİMSAH",
+  "BALINA": "BALİNA",
+  "TAVSAN": "TAVŞAN",
+  "Toplanti": "Toplantı",
+};
+function adDisp(ad) { return AD_DISPLAY[ad] || ad; }
+
+const TIP_AD = {
+  anaokulu: "Anaokulu",
+  ilkokul:  "İlkokul",
+  ortaokul: "Ortaokul",
+  lise:     "Lise",
+  toplanti: "Toplantı",
+  amazing:  "Amazing",
+};
+
+const GUN_AD = ["Pazar","Pazartesi","Salı","Çarşamba","Perşembe","Cuma","Cumartesi"];
+const AY_AD  = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
+
+function jsDayToProgGun(d) { return (d >= 1 && d <= 5) ? d : null; }
+function parseHM(str) { const [h, m] = str.split(":").map(Number); return h * 60 + m; }
+function pad(n) { return String(n).padStart(2, "0"); }
+function formatClock(d) { return pad(d.getHours()) + ":" + pad(d.getMinutes()) + ":" + pad(d.getSeconds()); }
+function formatDate(d) { return GUN_AD[d.getDay()] + ", " + d.getDate() + " " + AY_AD[d.getMonth()]; }
+function nowMinutes(d) { return d.getHours() * 60 + d.getMinutes() + d.getSeconds() / 60; }
+
+function findCurrent(d) {
+  const g = jsDayToProgGun(d.getDay());
+  if (!g) return null;
+  const m = nowMinutes(d);
+  return PROGRAM.find(p => p.gun === g && parseHM(p.bas) <= m && m < parseHM(p.bit)) || null;
+}
+
+function findNext(d) {
+  const g = jsDayToProgGun(d.getDay());
+  const m = nowMinutes(d);
+  if (g) {
+    const todayNext = PROGRAM
+      .filter(p => p.gun === g && parseHM(p.bas) > m)
+      .sort((a, b) => parseHM(a.bas) - parseHM(b.bas))[0];
+    if (todayNext) return { ders: todayNext, ayniGun: true };
+  }
+  const today = d.getDay();
+  for (let i = 1; i <= 7; i++) {
+    const checkDay = (today + i) % 7;
+    if (checkDay < 1 || checkDay > 5) continue;
+    const dersler = PROGRAM
+      .filter(p => p.gun === checkDay)
+      .sort((a, b) => parseHM(a.bas) - parseHM(b.bas));
+    if (dersler.length) {
+      return { ders: dersler[0], ayniGun: false, dayDiff: i };
+    }
+  }
+  return null;
+}
+
+function progressPct(p, d) {
+  const bas = parseHM(p.bas), bit = parseHM(p.bit);
+  return Math.max(0, Math.min(100, ((nowMinutes(d) - bas) / (bit - bas)) * 100));
+}
+function kalanDk(p, d) { return Math.max(0, Math.ceil(parseHM(p.bit) - nowMinutes(d))); }
+function dkSonra(p, d) { return Math.max(0, Math.ceil(parseHM(p.bas) - nowMinutes(d))); }
+
+// --- Safe DOM builders (no innerHTML with dynamic content) ---
+function el(tag, opts) {
+  const e = document.createElement(tag);
+  if (opts) {
+    if (opts.className) e.className = opts.className;
+    if (opts.text != null) e.textContent = opts.text;
+    if (opts.style) e.setAttribute("style", opts.style);
+  }
+  return e;
+}
+function clear(node) { while (node.firstChild) node.removeChild(node.firstChild); }
+
+function makeBadge(tip) {
+  const b = el("span", { className: "badge b-" + tip, text: TIP_AD[tip] });
+  return b;
+}
+
+function renderNow(d) {
+  const area = document.getElementById("now-area");
+  clear(area);
+  const cur = findCurrent(d);
+  const g = jsDayToProgGun(d.getDay());
+
+  if (!cur) {
+    let msg;
+    if (!g) msg = "Hafta sonu — bugün ders yok";
+    else {
+      const m = nowMinutes(d);
+      const todayDersler = PROGRAM.filter(p => p.gun === g);
+      if (!todayDersler.length) msg = "Bugün ders yok";
+      else if (m < parseHM(todayDersler[0].bas)) msg = "Günün ilk dersi henüz başlamadı";
+      else if (m >= parseHM(todayDersler[todayDersler.length - 1].bit)) msg = "Bugün için tüm dersler tamamlandı";
+      else msg = "Şu an teneffüs · ders arası";
+    }
+    area.appendChild(el("div", { className: "card empty", text: msg }));
+    return;
+  }
+
+  const card = el("div", { className: "card" });
+  card.appendChild(el("div", { className: "label", text: "Şu anki ders" }));
+
+  const baslik = el("div", { className: "ders-baslik" });
+  baslik.appendChild(el("span", { className: "ders-ad", text: adDisp(cur.ad) }));
+  baslik.appendChild(makeBadge(cur.tip));
+  card.appendChild(baslik);
+
+  const meta = el("div", { className: "meta" });
+  const left = el("span");
+  left.appendChild(el("strong", { text: cur.bas }));
+  left.appendChild(document.createTextNode(" – "));
+  left.appendChild(el("strong", { text: cur.bit }));
+  meta.appendChild(left);
+  meta.appendChild(el("span", { text: kalanDk(cur, d) + " dk kaldı" }));
+  card.appendChild(meta);
+
+  const prog = el("div", { className: "progress b-" + cur.tip, style: "color: var(--" + cur.tip + ");" });
+  prog.appendChild(el("span", { style: "width: " + progressPct(cur, d).toFixed(1) + "%;" }));
+  card.appendChild(prog);
+
+  area.appendChild(card);
+}
+
+function renderNext(d) {
+  const area = document.getElementById("next-area");
+  clear(area);
+  const nx = findNext(d);
+  if (!nx) return;
+  const { ders, ayniGun, dayDiff } = nx;
+
+  let whenText;
+  if (ayniGun) {
+    const dk = dkSonra(ders, d);
+    whenText = dk < 60 ? (ders.bas + " · " + dk + " dk sonra") : ("Bugün " + ders.bas);
+  } else {
+    whenText = GUN_AD[ders.gun] + " " + ders.bas + (dayDiff === 1 ? " · yarın" : "");
+  }
+
+  const card = el("div", { className: "card" });
+  card.appendChild(el("div", { className: "label", text: "Sonraki ders" }));
+
+  const row = el("div", { className: "next-row" });
+  const info = el("div", { className: "next-info" });
+  const name = el("div", { className: "next-name" });
+  name.appendChild(el("span", { text: adDisp(ders.ad) }));
+  name.appendChild(makeBadge(ders.tip));
+  info.appendChild(name);
+  info.appendChild(el("div", { className: "next-when", text: whenText }));
+  row.appendChild(info);
+  card.appendChild(row);
+
+  area.appendChild(card);
+}
+
+function renderWeekly(d) {
+  const wrap = document.getElementById("weekly");
+  clear(wrap);
+  const todayG = jsDayToProgGun(d.getDay());
+  const m = nowMinutes(d);
+  const cur = findCurrent(d);
+
+  for (let g = 1; g <= 5; g++) {
+    const dersler = PROGRAM
+      .filter(p => p.gun === g)
+      .sort((a, b) => parseHM(a.bas) - parseHM(b.bas));
+    const isToday = g === todayG;
+    const day = el("div", { className: "day" + (isToday ? " today" : "") });
+    day.appendChild(el("div", { className: "day-name", text: GUN_AD[g] + (isToday ? " · bugün" : "") }));
+
+    if (!dersler.length) {
+      day.appendChild(el("div", { className: "day-empty", text: "Ders yok" }));
+    } else {
+      const chips = el("div", { className: "chips" });
+      for (const p of dersler) {
+        let cls = "chip b-" + p.tip;
+        if (isToday) {
+          if (cur && cur === p) cls += " now";
+          else if (parseHM(p.bit) <= m) cls += " done";
+        }
+        const chip = el("span", { className: cls, style: "color: var(--" + p.tip + ");" });
+        chip.appendChild(el("span", { className: "t", text: p.bas }));
+        chip.appendChild(document.createTextNode(adDisp(p.ad)));
+        chips.appendChild(chip);
+      }
+      day.appendChild(chips);
+    }
+    wrap.appendChild(day);
+  }
+}
+
+function tick() {
+  const d = new Date();
+  document.getElementById("clock").textContent = formatClock(d);
+  document.getElementById("date").textContent = formatDate(d);
+  renderNow(d);
+  renderNext(d);
+  renderWeekly(d);
+}
+
+tick();
+setInterval(tick, 1000);
+</script>
+</body>
+</html>
