@@ -1,3 +1,4 @@
+(window.ALL_SCHEDULES = window.ALL_SCHEDULES || []);
 window.SCHEDULE = {
   teacher: "Emre Günay",
   program: [
@@ -26,3 +27,4 @@ window.SCHEDULE = {
     { gun: 5, bas: "16:15", bit: "16:50", ad: "Amazing",  lab: "i", kademe: "amazing" },
   ],
 };
+window.ALL_SCHEDULES.push(window.SCHEDULE);

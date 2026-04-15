@@ -289,6 +289,48 @@ h2.section-title {
   margin-top: 4px;
 }
 
+/* Labs page */
+.lab-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.lab-title-text {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.lab-day {
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+}
+.lab-day.today .lab-day-name { color: var(--text); }
+.lab-day-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 6px;
+}
+.lab-day-total {
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 6px;
+  font-variant-numeric: tabular-nums;
+}
+.lab-day-empty {
+  color: var(--muted);
+  font-size: 13px;
+  font-style: italic;
+}
+.chip.free-chip {
+  color: #7dd3a0;
+  border-color: rgba(125, 211, 160, 0.4);
+  background: rgba(125, 211, 160, 0.1);
+}
+
 footer {
   text-align: center;
   color: var(--muted);
