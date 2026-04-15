@@ -20,7 +20,7 @@ window.SCHEDULE = {
     { gun: 3, bas: "16:25", bit: "17:00", ad: "6C",       lab: "L", kademe: "ortaokul" },
     // Perşembe
     { gun: 4, bas: "12:20", bit: "12:55", ad: "10/Fen-A", lab: "L", kademe: "lise" },
-    { gun: 4, bas: "15:25", bit: "16:00", ad: "Amazing",  lab: "i", kademe: "amazing" },
+    { gun: 4, bas: "16:10", bit: "16:45", ad: "Amazing",  lab: "i", kademe: "amazing" },
     // Cuma
     { gun: 5, bas: "14:15", bit: "14:50", ad: "10/AND-A", lab: "L", kademe: "lise" },
     { gun: 5, bas: "15:00", bit: "15:35", ad: "10/AND-B", lab: "L", kademe: "lise" },
