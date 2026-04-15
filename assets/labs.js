@@ -1,19 +1,24 @@
-// Lab availability: aggregates all schedules, computes free/occupied slots per lab per day.
+// Lab availability: tabbed UI with visual timeline for each day.
+// All data is hardcoded from data-*.js files — no user input is rendered.
 
 (function () {
-  const GUN_AD = ["Pazar","Pazartesi","Salı","Çarşamba","Perşembe","Cuma","Cumartesi"];
-  const AY_AD  = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
+  const GUN_AD = ["Pazar", "Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi"];
+  const GUN_KISA = ["Paz", "Pzt", "Sal", "Çar", "Per", "Cum", "Cmt"];
+  const AY_AD = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
 
   const LABS = [
-    { key: "i", name: "İlkokul Laboratuvarı", kademe: "ilkokul" },
-    { key: "O", name: "Ortaokul Laboratuvarı", kademe: "ortaokul" },
-    { key: "L", name: "Lise Laboratuvarı", kademe: "lise" },
+    { key: "i", short: "İ", name: "İlkokul", fullName: "İlkokul Laboratuvarı" },
+    { key: "O", short: "O", name: "Ortaokul", fullName: "Ortaokul Laboratuvarı" },
+    { key: "L", short: "L", name: "Lise",     fullName: "Lise Laboratuvarı" },
   ];
 
-  // Operating window (minutes since midnight)
-  const DAY_START = 9 * 60;       // 09:00
-  const DAY_END   = 17 * 60;      // 17:00
-  const MIN_GAP   = 10;           // 10 dk altı boşlukları gösterme
+  const DAY_START = 9 * 60;    // 09:00
+  const DAY_END   = 17 * 60;   // 17:00
+  const SPAN      = DAY_END - DAY_START;
+  const MIN_GAP   = 10;        // dk — altını gösterme
+  const LABEL_MIN = 28;        // dk — bu ve üzerinde saat etiketi yaz
+
+  const STORAGE_KEY = "labs.selected";
 
   function pad(n) { return String(n).padStart(2, "0"); }
   function parseHM(s) { const [h, m] = s.split(":").map(Number); return h * 60 + m; }
@@ -21,15 +26,32 @@
   function fmtDur(m) {
     if (m < 60) return m + " dk";
     const h = Math.floor(m / 60), r = m % 60;
-    return r ? (h + " sa " + r + " dk") : (h + " sa");
+    return r ? (h + "sa " + r + "dk") : (h + "sa");
   }
   function fmtClock(d) { return pad(d.getHours()) + ":" + pad(d.getMinutes()) + ":" + pad(d.getSeconds()); }
-  function fmtDate(d) { return GUN_AD[d.getDay()] + ", " + d.getDate() + " " + AY_AD[d.getMonth()]; }
+  function fmtDate(d) { return GUN_AD[d.getDay()] + " · " + d.getDate() + " " + AY_AD[d.getMonth()]; }
+  function pct(m) { return ((m - DAY_START) / SPAN) * 100; }
+  function clampPct(v) { return Math.max(0, Math.min(100, v)); }
 
+  function el(tag, opts) {
+    const e = document.createElement(tag);
+    if (opts) {
+      if (opts.className) e.className = opts.className;
+      if (opts.text != null) e.textContent = opts.text;
+      if (opts.style) e.setAttribute("style", opts.style);
+      if (opts.title) e.setAttribute("title", opts.title);
+      if (opts.href) e.setAttribute("href", opts.href);
+      if (opts.aria) for (const k in opts.aria) e.setAttribute("aria-" + k, opts.aria[k]);
+      if (opts.data) for (const k in opts.data) e.setAttribute("data-" + k, opts.data[k]);
+    }
+    return e;
+  }
+  function clear(node) { while (node.firstChild) node.removeChild(node.firstChild); }
+
+  // ----- Aggregation -----
   function collectLessons(labKey, gun) {
     const out = [];
-    const all = window.ALL_SCHEDULES || [];
-    for (const sch of all) {
+    for (const sch of (window.ALL_SCHEDULES || [])) {
       for (const p of sch.program) {
         if (p.lab === labKey && p.gun === gun) {
           out.push({
@@ -44,7 +66,6 @@
     out.sort((a, b) => a.bas - b.bas || a.bit - b.bit);
     return out;
   }
-
   function mergeIntervals(intervals) {
     if (!intervals.length) return [];
     const merged = [{ bas: intervals[0].bas, bit: intervals[0].bit }];
@@ -56,84 +77,238 @@
     }
     return merged;
   }
-
-  function computeGaps(merged, dayStart, dayEnd) {
-    const gaps = [];
-    let cursor = dayStart;
+  function buildSegments(lessons, merged) {
+    const segs = [];
+    let cursor = DAY_START;
     for (const iv of merged) {
-      if (iv.bas > cursor) gaps.push({ bas: cursor, bit: Math.min(iv.bas, dayEnd) });
-      cursor = Math.max(cursor, iv.bit);
-      if (cursor >= dayEnd) break;
-    }
-    if (cursor < dayEnd) gaps.push({ bas: cursor, bit: dayEnd });
-    return gaps.filter(g => g.bit - g.bas >= MIN_GAP);
-  }
-
-  // Safe DOM helpers
-  function el(tag, opts) {
-    const e = document.createElement(tag);
-    if (opts) {
-      if (opts.className) e.className = opts.className;
-      if (opts.text != null) e.textContent = opts.text;
-      if (opts.style) e.setAttribute("style", opts.style);
-      if (opts.title) e.setAttribute("title", opts.title);
-    }
-    return e;
-  }
-  function clear(node) { while (node.firstChild) node.removeChild(node.firstChild); }
-
-  function render() {
-    const d = new Date();
-    document.getElementById("clock").textContent = fmtClock(d);
-    document.getElementById("date").textContent = fmtDate(d);
-
-    const wrap = document.getElementById("labs-area");
-    clear(wrap);
-
-    const todayGun = (d.getDay() >= 1 && d.getDay() <= 5) ? d.getDay() : null;
-
-    for (const lab of LABS) {
-      const section = el("div", { className: "card" });
-      const title = el("div", { className: "lab-title" });
-      title.appendChild(el("span", { className: "badge k-" + lab.kademe, text: lab.key + "-Lab" }));
-      title.appendChild(el("span", { className: "lab-title-text", text: lab.name }));
-      section.appendChild(title);
-
-      for (let g = 1; g <= 5; g++) {
-        const lessons = collectLessons(lab.key, g);
-        const merged = mergeIntervals(lessons);
-        const gaps = computeGaps(merged, DAY_START, DAY_END);
-        const isToday = g === todayGun;
-
-        const dayRow = el("div", { className: "lab-day" + (isToday ? " today" : "") });
-        dayRow.appendChild(el("div", { className: "lab-day-name", text: GUN_AD[g] + (isToday ? " · bugün" : "") }));
-
-        if (!gaps.length) {
-          dayRow.appendChild(el("div", { className: "lab-day-empty", text: "Tamamen dolu" }));
-        } else {
-          // Also show total free minutes
-          const totalFree = gaps.reduce((s, g2) => s + (g2.bit - g2.bas), 0);
-          dayRow.appendChild(el("div", { className: "lab-day-total", text: "Toplam boş: " + fmtDur(totalFree) }));
-
-          const chips = el("div", { className: "chips" });
-          for (const gap of gaps) {
-            const dur = gap.bit - gap.bas;
-            const chip = el("span", { className: "chip free-chip", title: fmtDur(dur) });
-            chip.appendChild(el("span", { className: "t", text: fmtHM(gap.bas) + " – " + fmtHM(gap.bit) }));
-            chip.appendChild(document.createTextNode(fmtDur(dur)));
-            chips.appendChild(chip);
-          }
-          dayRow.appendChild(chips);
-        }
-
-        section.appendChild(dayRow);
+      if (iv.bas > DAY_END) break;
+      if (iv.bas > cursor) {
+        segs.push({ type: "free", bas: cursor, bit: Math.min(iv.bas, DAY_END) });
       }
-      wrap.appendChild(section);
+      const busyStart = Math.max(iv.bas, cursor);
+      const busyEnd = Math.min(iv.bit, DAY_END);
+      if (busyEnd > busyStart) {
+        const local = lessons.filter(l => l.bas < busyEnd && l.bit > busyStart);
+        segs.push({ type: "busy", bas: busyStart, bit: busyEnd, lessons: local });
+      }
+      cursor = Math.max(cursor, iv.bit);
+      if (cursor >= DAY_END) break;
+    }
+    if (cursor < DAY_END) segs.push({ type: "free", bas: cursor, bit: DAY_END });
+    return segs;
+  }
+
+  function dayData(labKey, gun) {
+    const lessons = collectLessons(labKey, gun);
+    const merged = mergeIntervals(lessons);
+    const segs = buildSegments(lessons, merged);
+    let freeMin = 0;
+    for (const s of segs) if (s.type === "free" && (s.bit - s.bas) >= MIN_GAP) freeMin += (s.bit - s.bas);
+    return { lessons, merged, segs, freeMin };
+  }
+
+  function labWeekFreeMin(labKey) {
+    let total = 0;
+    for (let g = 1; g <= 5; g++) total += dayData(labKey, g).freeMin;
+    return total;
+  }
+  function weekBusyMin(labKey) {
+    let total = 0;
+    for (let g = 1; g <= 5; g++) {
+      for (const m of dayData(labKey, g).merged) total += (m.bit - m.bas);
+    }
+    return total;
+  }
+
+  // ----- Rendering -----
+  function renderRuler(container) {
+    clear(container);
+    const track = el("div", { className: "ruler-track" });
+    for (let h = 9; h <= 17; h++) {
+      const left = ((h * 60 - DAY_START) / SPAN) * 100;
+      const tick = el("div", { className: "ruler-tick", style: "left: " + left + "%;" });
+      tick.appendChild(el("div", { className: "tick-line" }));
+      tick.appendChild(el("div", { className: "tick-label", text: pad(h) }));
+      track.appendChild(tick);
+    }
+    container.appendChild(el("div", { className: "ruler-spacer", text: "Gün" }));
+    container.appendChild(track);
+    container.appendChild(el("div", { className: "ruler-right-spacer", text: "Boş" }));
+  }
+
+  function renderDayRow(labKey, gun, todayGun, nowM) {
+    const row = el("div", {
+      className: "t-day" + (gun === todayGun ? " today" : ""),
+      style: "animation-delay: " + (gun * 60) + "ms;"
+    });
+
+    // Day label (left)
+    const lbl = el("div", { className: "t-day-label" });
+    lbl.appendChild(document.createTextNode(GUN_KISA[gun]));
+    lbl.appendChild(el("small", { text: GUN_AD[gun].slice(0, 4) + "." }));
+    row.appendChild(lbl);
+
+    // Track
+    const track = el("div", { className: "t-day-track" });
+    const data = dayData(labKey, gun);
+    const hasAnyFree = data.segs.some(s => s.type === "free" && (s.bit - s.bas) >= MIN_GAP);
+
+    for (const s of data.segs) {
+      const left = clampPct(pct(s.bas));
+      const width = Math.max(0.4, clampPct(pct(s.bit)) - left);
+      if (s.type === "busy") {
+        const lessonsLabel = s.lessons
+          .map(l => fmtHM(l.bas) + "–" + fmtHM(l.bit) + " " + l.ad + " · " + l.teacher)
+          .join("\n");
+        const seg = el("div", {
+          className: "t-seg busy",
+          style: "left:" + left + "%; width:" + width + "%;",
+          title: "Dolu: " + fmtHM(s.bas) + "–" + fmtHM(s.bit) + "\n" + lessonsLabel,
+        });
+        track.appendChild(seg);
+      } else {
+        const dur = s.bit - s.bas;
+        if (dur < MIN_GAP) continue;
+        const seg = el("div", {
+          className: "t-seg free",
+          style: "left:" + left + "%; width:" + width + "%;",
+          title: "Boş: " + fmtHM(s.bas) + "–" + fmtHM(s.bit) + " (" + fmtDur(dur) + ")",
+        });
+        // Text inside if wide enough
+        if (dur >= LABEL_MIN) {
+          seg.appendChild(el("span", { className: "seg-label", text: fmtHM(s.bas) + "–" + fmtHM(s.bit) }));
+          if (dur >= 50) seg.appendChild(el("span", { className: "seg-dur", text: fmtDur(dur) }));
+        }
+        track.appendChild(seg);
+      }
+    }
+
+    // NOW indicator (only today, within window)
+    if (gun === todayGun && nowM >= DAY_START && nowM <= DAY_END) {
+      const now = el("div", {
+        className: "t-now",
+        style: "left:" + clampPct(pct(nowM)) + "%;",
+        title: "Şu an " + fmtHM(Math.floor(nowM)),
+      });
+      track.appendChild(now);
+    }
+
+    row.appendChild(track);
+
+    // Total free (right)
+    const total = el("div", { className: "t-day-total" });
+    if (!hasAnyFree) {
+      total.appendChild(el("strong", { text: "Dolu" }));
+      total.appendChild(el("span", { className: "done-badge", text: "Tümü kapalı" }));
+      row.classList.add("full");
+    } else {
+      total.appendChild(el("strong", { text: fmtDur(data.freeMin) }));
+      total.appendChild(el("span", { className: "done-badge", text: "boş" }));
+    }
+    row.appendChild(total);
+    return row;
+  }
+
+  function renderLabPanel(labKey) {
+    const page = document.getElementById("page");
+    page.setAttribute("data-lab", labKey);
+
+    // Update tabs active state + their free-time subtitle
+    const tabsEl = document.querySelectorAll(".lab-tab");
+    tabsEl.forEach(t => {
+      const k = t.getAttribute("data-lab");
+      t.classList.toggle("active", k === labKey);
+      const free = labWeekFreeMin(k);
+      const sub = t.querySelector(".tab-free");
+      if (sub) sub.textContent = fmtDur(free) + " boş / hafta";
+    });
+
+    // Banner
+    const banner = document.getElementById("lab-banner");
+    clear(banner);
+    const lab = LABS.find(l => l.key === labKey);
+    banner.appendChild(el("div", { className: "eyebrow", text: lab.key + "-Lab" }));
+
+    const h2 = el("h2");
+    h2.appendChild(document.createTextNode(lab.name + " "));
+    const em = el("em", { text: "Laboratuvarı" });
+    h2.appendChild(em);
+    banner.appendChild(h2);
+
+    const stats = el("div", { className: "stats" });
+    const freeStat = el("div");
+    freeStat.appendChild(document.createTextNode("Haftalık boş"));
+    freeStat.appendChild(el("strong", { className: "free-big", text: fmtDur(labWeekFreeMin(labKey)) }));
+    const busyStat = el("div");
+    busyStat.appendChild(document.createTextNode("Haftalık dolu"));
+    busyStat.appendChild(el("strong", { text: fmtDur(weekBusyMin(labKey)) }));
+    const hoursStat = el("div");
+    hoursStat.appendChild(document.createTextNode("Zaman aralığı"));
+    hoursStat.appendChild(el("strong", { text: "09:00 – 17:00" }));
+    stats.appendChild(freeStat);
+    stats.appendChild(busyStat);
+    stats.appendChild(hoursStat);
+    banner.appendChild(stats);
+
+    // Ruler
+    const ruler = document.getElementById("timeline-ruler");
+    renderRuler(ruler);
+
+    // Timeline days
+    const d = new Date();
+    const todayGun = (d.getDay() >= 1 && d.getDay() <= 5) ? d.getDay() : null;
+    const nowM = d.getHours() * 60 + d.getMinutes() + d.getSeconds() / 60;
+
+    const days = document.getElementById("timeline-days");
+    clear(days);
+    for (let g = 1; g <= 5; g++) {
+      days.appendChild(renderDayRow(labKey, g, todayGun, nowM));
     }
   }
 
-  document.addEventListener("DOMContentLoaded", function () {
-    render();
-    setInterval(render, 1000);
-  });
+  // ----- Clock tick (fast) -----
+  function tickClock() {
+    const d = new Date();
+    const clockEl = document.getElementById("clock");
+    const dateEl = document.getElementById("date");
+    if (clockEl) clockEl.textContent = fmtClock(d);
+    if (dateEl) dateEl.textContent = fmtDate(d);
+  }
+
+  // Refresh NOW marker position (slow)
+  function tickNow() {
+    const page = document.getElementById("page");
+    const current = page.getAttribute("data-lab");
+    if (current) renderLabPanel(current);
+  }
+
+  // ----- Init -----
+  function init() {
+    // Tab click handlers
+    document.querySelectorAll(".lab-tab").forEach(tab => {
+      tab.addEventListener("click", () => {
+        const k = tab.getAttribute("data-lab");
+        try { localStorage.setItem(STORAGE_KEY, k); } catch (e) {}
+        renderLabPanel(k);
+      });
+    });
+
+    // Pick initial lab: saved or today's kademe-hint, else "i"
+    let initial = "i";
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved && LABS.find(l => l.key === saved)) initial = saved;
+    } catch (e) {}
+
+    renderLabPanel(initial);
+    tickClock();
+    setInterval(tickClock, 1000);
+    setInterval(tickNow, 30 * 1000); // refresh now-marker twice a minute
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
+  } else {
+    init();
+  }
 })();

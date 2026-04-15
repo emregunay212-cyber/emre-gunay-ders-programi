@@ -3,25 +3,67 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<meta name="theme-color" content="#0f1115" />
-<title>Lab Müsaitlik – Bilnet Balıkesir BT</title>
-<link rel="stylesheet" href="assets/style.css" />
+<meta name="theme-color" content="#0a0b10" />
+<title>Laboratuvar Müsaitlik · Bilnet Balıkesir BT</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="assets/labs.css" />
 </head>
 <body>
-<div class="wrap">
-  <header class="top">
-    <a href="index.html" class="back">‹ Geri</a>
-    <div class="teacher-name">Laboratuvar Müsaitlik</div>
-    <div class="clock" id="clock">--:--:--</div>
-    <div class="date" id="date">—</div>
+<div class="page" id="page">
+
+  <header class="labs-header">
+    <a href="index.html" class="back-link" aria-label="Geri">←</a>
+    <div class="title-block">
+      <div class="eyebrow">Bilnet Balıkesir · BT</div>
+      <h1>Laboratuvar<br/>Müsaitlik</h1>
+    </div>
+    <div class="clock-mini">
+      <div class="c" id="clock">--:--:--</div>
+      <div class="d" id="date">—</div>
+    </div>
   </header>
 
-  <p class="landing-sub" style="margin-top: 4px;">09:00 – 17:00 arası · 10 dk'dan kısa boşluklar hariç</p>
+  <nav class="lab-tabs" role="tablist" aria-label="Laboratuvar seç">
+    <button class="lab-tab" data-lab="i" role="tab">
+      <span class="mono-letter">İ</span>
+      <span class="tab-info">
+        <span class="tab-name">İlkokul Lab</span>
+        <span class="tab-free">—</span>
+      </span>
+    </button>
+    <button class="lab-tab" data-lab="O" role="tab">
+      <span class="mono-letter">O</span>
+      <span class="tab-info">
+        <span class="tab-name">Ortaokul Lab</span>
+        <span class="tab-free">—</span>
+      </span>
+    </button>
+    <button class="lab-tab" data-lab="L" role="tab">
+      <span class="mono-letter">L</span>
+      <span class="tab-info">
+        <span class="tab-name">Lise Lab</span>
+        <span class="tab-free">—</span>
+      </span>
+    </button>
+  </nav>
 
-  <div id="labs-area"></div>
+  <section class="lab-banner" id="lab-banner"></section>
 
-  <footer>Bilnet Balıkesir · Bilişim Teknolojileri</footer>
+  <div class="timeline-wrap">
+    <div class="timeline-ruler" id="timeline-ruler"></div>
+    <div class="timeline-days" id="timeline-days"></div>
+  </div>
+
+  <div class="legend">
+    <span class="legend-item"><span class="legend-swatch free"></span>Boş</span>
+    <span class="legend-item"><span class="legend-swatch busy"></span>Dolu</span>
+    <span class="legend-item"><span class="legend-swatch now"></span>Şimdi</span>
+  </div>
+
+  <div class="page-foot">09:00 – 17:00 · 10 dk altı boşluklar gizli</div>
 </div>
+
 <script src="assets/data-emre.js"></script>
 <script src="assets/data-halil.js"></script>
 <script src="assets/data-imge.js"></script>
