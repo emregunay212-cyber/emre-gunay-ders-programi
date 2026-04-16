@@ -26,6 +26,18 @@ export default async function handler(req, res) {
       const { teachers } = await loadAll();
       const idx = teachers.findIndex(t => t.slug === slug);
       if (idx === -1) return res.status(404).json({ error: "Öğretmen bulunamadı" });
+
+      // One endpoint = one teacher. If another teacher previously subscribed
+      // with this same browser/device, claim the endpoint for the new teacher
+      // so notifications don't leak across accounts on the same device.
+      for (let i = 0; i < teachers.length; i++) {
+        if (i === idx) continue;
+        if (!Array.isArray(teachers[i].pushSubscriptions)) continue;
+        teachers[i].pushSubscriptions = teachers[i].pushSubscriptions.filter(
+          s => s.endpoint !== sub.endpoint
+        );
+      }
+
       if (!Array.isArray(teachers[idx].pushSubscriptions)) teachers[idx].pushSubscriptions = [];
       const existing = teachers[idx].pushSubscriptions.findIndex(s => s.endpoint === sub.endpoint);
       const clean = { endpoint: sub.endpoint, keys: { p256dh: sub.keys.p256dh, auth: sub.keys.auth } };
