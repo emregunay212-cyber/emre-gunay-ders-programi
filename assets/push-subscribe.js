@@ -58,30 +58,63 @@
     return await reg.pushManager.getSubscription();
   }
 
+  function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
+
   async function subscribe() {
     const slug = teacherSlug();
     if (!slug) return { ok: false, error: "no-slug" };
     if (!isPushSupported()) return { ok: false, error: "not-supported" };
     let browserSub = null;
+    let step = "init";
     try {
-      const reg = await navigator.serviceWorker.register("/sw.js");
-      await navigator.serviceWorker.ready;
+      step = "register-sw";
+      await navigator.serviceWorker.register("/sw.js");
+      step = "sw-ready";
+      const reg = await navigator.serviceWorker.ready;
+      step = "permission";
       const permission = await Notification.requestPermission();
       if (permission !== "granted") return { ok: false, error: "denied" };
+      step = "vapid";
       const vapid = await getVapidKey();
       if (!vapid) return { ok: false, error: "no-vapid" };
-      // Clear any stale subscription first. Browsers throw
-      // "Registration failed - push service error" when an existing
-      // subscription was created with a different applicationServerKey
-      // (e.g. after VAPID key rotation or a previous deploy).
+      const appServerKey = urlBase64ToUint8Array(vapid);
+
+      // Clear any stale subscription. Browsers throw "Registration failed"
+      // when an existing subscription was created with a different
+      // applicationServerKey (VAPID rotation, prior deploy, etc.).
+      step = "unsubscribe-old";
       try {
         const existing = await reg.pushManager.getSubscription();
-        if (existing) await existing.unsubscribe();
+        if (existing) {
+          await existing.unsubscribe();
+          // Some Android Chrome builds need a brief pause before the push
+          // service considers the previous registration gone.
+          await wait(300);
+        }
       } catch {}
-      browserSub = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(vapid),
-      });
+
+      // Subscribe, with one retry on transient push-service errors.
+      step = "subscribe";
+      try {
+        browserSub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: appServerKey,
+        });
+      } catch (firstErr) {
+        step = "subscribe-retry";
+        await wait(1200);
+        // Make sure nothing was left behind by the failed attempt
+        try {
+          const leftover = await reg.pushManager.getSubscription();
+          if (leftover) { await leftover.unsubscribe(); await wait(300); }
+        } catch {}
+        browserSub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: appServerKey,
+        });
+      }
+
+      step = "server-save";
       const subJson = browserSub.toJSON();
       const res = await fetch("/api/push?action=subscribe", {
         method: "POST",
@@ -99,10 +132,10 @@
       }
       return { ok: true, subscription: browserSub };
     } catch (err) {
-      // Any failure after creating the browser sub — roll it back.
       if (browserSub) { try { await browserSub.unsubscribe(); } catch {} }
-      console.error("Subscribe error:", err);
-      return { ok: false, error: String(err && err.message || err) };
+      const msg = (err && err.message) ? err.message : String(err);
+      console.error("Subscribe error at step:", step, err);
+      return { ok: false, error: "[" + step + "] " + msg };
     }
   }
 
