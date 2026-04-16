@@ -78,7 +78,7 @@
 
   async function fetchToday() {
     try {
-      const r = await fetch("/api/schedules/today", { credentials: "same-origin", cache: "no-store" });
+      const r = await fetch("/api/schedules?mode=today", { credentials: "same-origin", cache: "no-store" });
       if (!r.ok) return null;
       return await r.json();
     } catch { return null; }

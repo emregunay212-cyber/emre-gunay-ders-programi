@@ -46,7 +46,7 @@
 
   async function getVapidKey() {
     try {
-      const r = await fetch("/api/push/vapid-key");
+      const r = await fetch("/api/push?action=vapid-key");
       if (!r.ok) return null;
       const j = await r.json();
       return j.publicKey || null;
@@ -74,7 +74,7 @@
         applicationServerKey: urlBase64ToUint8Array(vapid),
       });
       const subJson = sub.toJSON();
-      const res = await fetch("/api/push/subscribe", {
+      const res = await fetch("/api/push?action=subscribe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ teacherSlug: slug, subscription: subJson }),
@@ -94,7 +94,7 @@
       if (sub) {
         const endpoint = sub.endpoint;
         await sub.unsubscribe();
-        await fetch("/api/push/unsubscribe", {
+        await fetch("/api/push?action=unsubscribe", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ teacherSlug: slug, endpoint }),
@@ -166,7 +166,7 @@
     const slug = teacherSlug();
     if (!slug) return [];
     try {
-      const res = await fetch("/api/schedules/today", { credentials: "same-origin", cache: "no-store" });
+      const res = await fetch("/api/schedules?mode=today", { credentials: "same-origin", cache: "no-store" });
       if (!res.ok) return [];
       const data = await res.json();
       const me = (data.teachers || []).find(t => t.slug === slug);

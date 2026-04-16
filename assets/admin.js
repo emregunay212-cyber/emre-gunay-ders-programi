@@ -146,7 +146,7 @@
 
   async function checkAuth() {
     try {
-      const r = await api("GET", "/api/auth/me");
+      const r = await api("GET", "/api/auth?action=me");
       if (!r.admin) { location.replace("admin-login.html"); return false; }
       return true;
     } catch {
@@ -253,7 +253,7 @@
       cancelText: "Vazgeç",
     });
     if (!ok) return;
-    try { await api("POST", "/api/auth/logout"); } catch {}
+    try { await api("POST", "/api/auth?action=logout"); } catch {}
     location.replace("admin-login.html");
   });
 

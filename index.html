@@ -806,7 +806,7 @@
 
   async function fetchAll() {
     try {
-      const r = await fetch("/api/schedules/today", { credentials: "same-origin", cache: "no-store" });
+      const r = await fetch("/api/schedules?mode=today", { credentials: "same-origin", cache: "no-store" });
       if (!r.ok) return;
       apiData = await r.json();
       renderLabs();
