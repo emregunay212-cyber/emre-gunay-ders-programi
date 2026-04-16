@@ -92,7 +92,8 @@
       .filter(l => l.lab === labKey && l.gun === gun)
       .filter(l => {
         if (l.onlyOn && l.onlyOn !== today) return false;
-        if (Array.isArray(l.hiddenOn) && l.hiddenOn.includes(today)) return false;
+        if (Array.isArray(l.cancelledOn) && l.cancelledOn.includes(today)) return false;
+        if (Array.isArray(l.transferredOn) && l.transferredOn.some(x => x.date === today)) return false;
         return true;
       })
       .sort((a, b) => parseHM(a.bas) - parseHM(b.bas));

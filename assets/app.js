@@ -21,6 +21,19 @@
     "L": "Lise Lab",
   };
 
+  // Teacher name lookup, populated from data-loader's schedule:updated event.
+  const teachersById = {};
+  window.addEventListener("schedule:updated", (e) => {
+    const api = e.detail || {};
+    for (const t of (api.teachers || [])) teachersById[t.id] = t.name;
+  });
+  function teacherName(id) { return teachersById[id] || ""; }
+  function shortTeacherName(name) {
+    if (!name) return "";
+    const parts = name.split(/\s+/);
+    return parts[parts.length - 1];
+  }
+
   function jsDayToProgGun(d) { return (d >= 1 && d <= 5) ? d : null; }
   function parseHM(str) { const [h, m] = str.split(":").map(Number); return h * 60 + m; }
   function pad(n) { return String(n).padStart(2, "0"); }
@@ -29,39 +42,52 @@
   function nowMinutes(d) { return d.getHours() * 60 + d.getMinutes() + d.getSeconds() / 60; }
 
   // Produce the ISO date (YYYY-MM-DD) this week for a given prog gun (1..5).
-  // Used to match one-off substitute/absence dates to weekday slots.
   function pad2(n) { return String(n).padStart(2, "0"); }
   function isoDateForProgGun(now, gun) {
-    const today = now.getDay();           // 0..6 (Sun..Sat)
-    const todayGun = today === 0 ? 7 : today; // Mon=1..Sun=7
-    const targetGun = gun;                // 1..5
-    const diff = targetGun - todayGun;    // days from today
+    const today = now.getDay();
+    const todayGun = today === 0 ? 7 : today;
+    const diff = gun - todayGun;
     const target = new Date(now);
     target.setDate(target.getDate() + diff);
     return target.getFullYear() + "-" + pad2(target.getMonth() + 1) + "-" + pad2(target.getDate());
   }
 
-  // Filter the program for the current moment:
-  //  - substitute (onlyOn) lessons: only kept if onlyOn matches this week's gun date,
-  //    AND (if today) the lesson hasn't ended yet.
-  //  - originals with hiddenOn: dropped on those specific dates.
+  // Applies absence overrides per-date:
+  //  - substitute copy (onlyOn): kept only on matching weekday date, hidden after
+  //    end time today
+  //  - original with cancelledOn: marked passiveState="cancelled" for that date
+  //  - original with transferredOn: marked passiveState="transferred", passiveTo=teacherId
+  //  - after the absence date passes, the markers won't apply to future weeks
+  //    because they match specific ISO dates, so the lesson returns to normal.
   function applyOneOffs(prog, now) {
     const todayG = jsDayToProgGun(now.getDay());
     const m = nowMinutes(now);
-    return prog.filter(p => {
+    const out = [];
+    for (const p of prog) {
       const gunDate = isoDateForProgGun(now, p.gun);
+      // Substitute copy — only render on its matching date
       if (p.onlyOn) {
-        // Only show this copy on its matching date
-        if (p.onlyOn !== gunDate) return false;
-        // If it's today, hide after its end time
-        if (p.gun === todayG && parseHM(p.bit) <= m) return false;
-        return true;
+        if (p.onlyOn !== gunDate) continue;
+        if (p.gun === todayG && parseHM(p.bit) <= m) continue;
+        out.push(p);
+        continue;
       }
-      if (Array.isArray(p.hiddenOn) && p.hiddenOn.includes(gunDate)) {
-        return false;
+      // Original with cancellation marker for this date
+      if (Array.isArray(p.cancelledOn) && p.cancelledOn.includes(gunDate)) {
+        out.push({ ...p, passiveState: "cancelled", passiveDate: gunDate });
+        continue;
       }
-      return true;
-    });
+      // Original with transfer marker for this date
+      if (Array.isArray(p.transferredOn)) {
+        const t = p.transferredOn.find(x => x.date === gunDate);
+        if (t) {
+          out.push({ ...p, passiveState: "transferred", passiveTo: t.to, passiveDate: gunDate });
+          continue;
+        }
+      }
+      out.push(p);
+    }
+    return out;
   }
 
   function findCurrent(d, prog) {
@@ -230,16 +256,29 @@
           let cls = "chip k-" + p.kademe;
           if (isToday) {
             if (cur && cur === p) cls += " now";
-            else if (parseHM(p.bit) <= m) cls += " done";
+            else if (parseHM(p.bit) <= m && !p.passiveState) cls += " done";
           }
+          if (p.passiveState) cls += " passive passive-" + p.passiveState;
+          if (p.substitute) cls += " substitute";
+
           const titleParts = [p.bas + "–" + p.bit];
           if (p.lab) titleParts.push(LAB_AD[p.lab] || "");
-          if (p.substitute) titleParts.push("Devir");
-          const chip = el("span", { className: cls + (p.substitute ? " substitute" : ""), style: "color: var(--" + p.kademe + ");", title: titleParts.join(" · ") });
+          if (p.substitute) titleParts.push("Sana devredildi");
+          if (p.passiveState === "cancelled") titleParts.push("Bu tarih için iptal");
+          if (p.passiveState === "transferred") titleParts.push("Bu tarih için devredildi: " + teacherName(p.passiveTo));
+
+          const chip = el("span", { className: cls, style: "color: var(--" + p.kademe + ");", title: titleParts.join(" · ") });
           chip.appendChild(el("span", { className: "t", text: p.bas }));
           chip.appendChild(document.createTextNode(p.ad));
           if (p.lab) chip.appendChild(el("span", { className: "lb", text: p.lab }));
           if (p.substitute) chip.appendChild(el("span", { className: "lb", text: "↪", style: "background: #fb7185; color: #1c0710;" }));
+          if (p.passiveState === "transferred") {
+            const to = shortTeacherName(teacherName(p.passiveTo));
+            chip.appendChild(el("span", { className: "lb", text: "→ " + (to || "?"), style: "background: #fb923c; color: #1c0710;" }));
+          }
+          if (p.passiveState === "cancelled") {
+            chip.appendChild(el("span", { className: "lb", text: "İPTAL", style: "background: #f87171; color: #200707;" }));
+          }
           chips.appendChild(chip);
         }
         day.appendChild(chips);
@@ -257,12 +296,15 @@
     const teacherEl = document.getElementById("teacher-name");
     if (teacherEl && !teacherEl.textContent) teacherEl.textContent = data.teacher;
     // Apply one-off absence/transfer rules for this week:
-    //  - Keep a substitute (onlyOn) only on its exact date, hide after it ends today.
-    //  - Drop originals flagged as hidden for this week's date.
-    const prog = applyOneOffs(data.program || [], d);
-    renderNow(d, prog);
-    renderNext(d, prog);
-    renderWeekly(d, prog);
+    //  - Substitute copies render only on their date.
+    //  - Originals get passiveState on absent dates (dim + "devredildi" badge).
+    const fullProg = applyOneOffs(data.program || [], d);
+    // For "now" and "next" calculations, skip passive (the teacher isn't actually teaching).
+    const activeProg = fullProg.filter(p => !p.passiveState);
+    renderNow(d, activeProg);
+    renderNext(d, activeProg);
+    // Weekly shows ALL — including passive so teacher sees "today's lesson is transferred".
+    renderWeekly(d, fullProg);
   }
 
   document.addEventListener("DOMContentLoaded", function () {

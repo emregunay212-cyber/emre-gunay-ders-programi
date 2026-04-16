@@ -56,10 +56,13 @@
     for (const sch of (window.ALL_SCHEDULES || [])) {
       for (const p of sch.program) {
         if (p.lab !== labKey || p.gun !== gun) continue;
-        // One-off substitute copies: only count on their matching date
+        // Substitute copy: only counts on its own date
         if (p.onlyOn && p.onlyOn !== gunDate) continue;
-        // Originals hidden on this date (cancel/transfer)
-        if (Array.isArray(p.hiddenOn) && p.hiddenOn.includes(gunDate)) continue;
+        // Original cancelled on this date: lab slot is free
+        if (Array.isArray(p.cancelledOn) && p.cancelledOn.includes(gunDate)) continue;
+        // Original transferred on this date: original teacher doesn't hold lab
+        // (substitute copy already covers it with same time/lab)
+        if (Array.isArray(p.transferredOn) && p.transferredOn.some(x => x.date === gunDate)) continue;
         out.push({ bas: parseHM(p.bas), bit: parseHM(p.bit) });
       }
     }

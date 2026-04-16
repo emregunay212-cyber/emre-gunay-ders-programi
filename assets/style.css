@@ -266,6 +266,22 @@ h2.section-title {
 }
 .chip.now { box-shadow: 0 0 0 2px color-mix(in srgb, currentColor 45%, transparent); }
 .chip.done { opacity: 0.4; }
+.chip.passive {
+  opacity: 0.55;
+  background: repeating-linear-gradient(
+    135deg,
+    currentColor 0px,
+    currentColor 1px,
+    transparent 1px,
+    transparent 6px
+  );
+  background-color: color-mix(in srgb, currentColor 8%, transparent) !important;
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+  text-decoration-color: color-mix(in srgb, currentColor 50%, transparent);
+}
+.chip.passive .t { text-decoration: none; }
+.chip.passive-cancelled { border-style: dashed; }
 .day-empty { color: var(--muted); font-size: 12px; font-style: italic; }
 
 /* Landing */

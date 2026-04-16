@@ -36,8 +36,9 @@
       ad: l.ad, lab: l.lab || "", kademe: l.kademe,
       substitute: !!l.substitute,
       originalTeacherId: l.originalTeacherId || null,
-      onlyOn: l.onlyOn || null,      // substitute lesson valid only on this date
-      hiddenOn: l.hiddenOn || null,  // original lesson hidden on these dates
+      onlyOn: l.onlyOn || null,           // substitute copy valid only on this date
+      cancelledOn: l.cancelledOn || null, // dates where original is cancelled
+      transferredOn: l.transferredOn || null, // [{date, to}] where original is transferred
     };
   }
 
