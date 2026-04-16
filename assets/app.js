@@ -117,7 +117,9 @@
     baslik.appendChild(makeKademeBadge(cur.kademe));
     const lb = makeLabBadge(cur.lab);
     if (lb) baslik.appendChild(lb);
+    if (cur.substitute) baslik.appendChild(el("span", { className: "sub-badge", text: "Yerine" }));
     card.appendChild(baslik);
+    if (cur.substitute) card.appendChild(el("div", { className: "sub-origin", text: "Bu ders bugün sana devredildi" }));
 
     const meta = el("div", { className: "meta" });
     const left = el("span");
@@ -160,6 +162,7 @@
     name.appendChild(makeKademeBadge(ders.kademe));
     const lb = makeLabBadge(ders.lab);
     if (lb) name.appendChild(lb);
+    if (ders.substitute) name.appendChild(el("span", { className: "sub-badge", text: "Yerine" }));
     info.appendChild(name);
     info.appendChild(el("div", { className: "next-when", text: whenText }));
     row.appendChild(info);
@@ -193,10 +196,14 @@
             if (cur && cur === p) cls += " now";
             else if (parseHM(p.bit) <= m) cls += " done";
           }
-          const chip = el("span", { className: cls, style: "color: var(--" + p.kademe + ");", title: p.bas + "–" + p.bit + (p.lab ? " · " + (LAB_AD[p.lab] || "") : "") });
+          const titleParts = [p.bas + "–" + p.bit];
+          if (p.lab) titleParts.push(LAB_AD[p.lab] || "");
+          if (p.substitute) titleParts.push("Devir");
+          const chip = el("span", { className: cls + (p.substitute ? " substitute" : ""), style: "color: var(--" + p.kademe + ");", title: titleParts.join(" · ") });
           chip.appendChild(el("span", { className: "t", text: p.bas }));
           chip.appendChild(document.createTextNode(p.ad));
           if (p.lab) chip.appendChild(el("span", { className: "lb", text: p.lab }));
+          if (p.substitute) chip.appendChild(el("span", { className: "lb", text: "↪", style: "background: #fb7185; color: #1c0710;" }));
           chips.appendChild(chip);
         }
         day.appendChild(chips);

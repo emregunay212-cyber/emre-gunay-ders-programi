@@ -554,18 +554,326 @@
     }
   }
 
-  // ========== ABSENCES (Phase 3) ==========
+  // ========== ABSENCES ==========
+  // Plan: pick date, list teachers, per teacher toggle "yok". If yok, list that teacher's
+  // lessons for the date's weekday; for each, let admin transfer to substitute or cancel.
+  // On Save, POST absence record; reload list. Active absences shown at bottom.
+
+  const pendingAbsences = new Map(); // teacherId → { active: bool, overrides: Map<lessonId, {action, substituteTeacherId}> }
+
+  function isoWeekdayProgGun(isoDate) {
+    // Prog gun: 1=Pazartesi..5=Cuma. getDay: 0=Pazar.
+    const dow = new Date(isoDate + "T00:00:00").getDay();
+    return (dow >= 1 && dow <= 5) ? dow : null;
+  }
+
+  function availableSubstitutes(targetLesson, teacherId, lessons, absences, date) {
+    // Teachers who (a) don't already teach at an overlapping time that day, (b) aren't already absent on that date.
+    const gun = targetLesson.gun;
+    const basA = parseHM(targetLesson.bas), bitA = parseHM(targetLesson.bit);
+    const absentThatDay = new Set((absences || []).filter(a => a.date === date).map(a => a.teacherId));
+    return state.teachers.filter(t => {
+      if (t.id === teacherId) return false;
+      if (absentThatDay.has(t.id)) return false;
+      const busy = lessons.some(l =>
+        l.teacherId === t.id && l.gun === gun
+        && parseHM(l.bas) < bitA && basA < parseHM(l.bit)
+      );
+      return !busy;
+    });
+  }
+
   function renderAbsences() {
     const area = document.getElementById("absences-area");
     clear(area);
-    area.appendChild(el("div", { className: "alert alert-info", text: "Yoklama özelliği Phase 3'te aktifleşecek. Şimdilik sadece ders CRUD kullanılabilir." }));
+
+    // Controls row
+    const controls = el("div", { className: "absence-controls" });
+    const dateField = el("div", { className: "field", style: "margin:0; min-width:180px;" });
+    dateField.appendChild(el("label", { text: "Tarih", attrs: { for: "abs-date" } }));
+    const dateInput = el("input", { attrs: { id: "abs-date", type: "date" } });
+    dateInput.value = state.absenceDate;
+    dateInput.addEventListener("change", () => {
+      state.absenceDate = dateInput.value || todayISO();
+      pendingAbsences.clear();
+      renderAbsences();
+    });
+    dateField.appendChild(dateInput);
+    controls.appendChild(dateField);
+
+    const dowInfo = el("div", { style: "font-family: var(--font-mono); font-size:11px; color: var(--muted);" });
+    const gun = isoWeekdayProgGun(state.absenceDate);
+    dowInfo.textContent = gun ? GUN_AD[gun].toUpperCase() : "HAFTA SONU";
+    controls.appendChild(dowInfo);
+    area.appendChild(controls);
+
+    if (!gun) {
+      area.appendChild(el("div", { className: "alert alert-info", text: "Seçilen tarih hafta sonu. Yoklama gerekmiyor." }));
+    } else {
+      // Teachers list with toggles
+      for (const t of state.teachers) {
+        area.appendChild(buildAbsenceTeacherRow(t, gun));
+      }
+    }
+
+    // Active absences
+    area.appendChild(el("h3", { className: "panel-title", text: "Kayıtlı Yoklamalar", style: "margin-top: 28px; font-size: 15px;" }));
+    if (!state.absences.length) {
+      area.appendChild(el("div", { className: "day-empty-admin", text: "Kayıtlı yoklama yok" }));
+    } else {
+      const tById = Object.fromEntries(state.teachers.map(t => [t.id, t.name]));
+      const lById = Object.fromEntries(state.lessons.map(l => [l.id, l]));
+      const sorted = [...state.absences].sort((a, b) => (b.date > a.date ? 1 : -1));
+      for (const ab of sorted) {
+        const card = el("div", { className: "active-absence-card" });
+        const head = el("div", { className: "active-absence-head" });
+        head.appendChild(el("div", { className: "active-absence-name", text: tById[ab.teacherId] || "?" }));
+        head.appendChild(el("div", { className: "active-absence-date", text: ab.date }));
+        card.appendChild(head);
+
+        const list = el("div", { className: "active-absence-list" });
+        for (const ov of (ab.lessonOverrides || [])) {
+          const l = lById[ov.lessonId];
+          const prefix = l ? `${l.bas}–${l.bit} ${l.ad}` : ov.lessonId;
+          let line;
+          if (ov.action === "cancel") line = prefix + " → İPTAL";
+          else line = prefix + " → " + (tById[ov.substituteTeacherId] || "?");
+          list.appendChild(el("div", { text: "• " + line }));
+        }
+        if (ab.note) list.appendChild(el("div", { text: "Not: " + ab.note, style: "margin-top:4px; font-style:italic;" }));
+        card.appendChild(list);
+
+        const actions = el("div", { style: "margin-top:8px; display:flex; justify-content:flex-end;" });
+        actions.appendChild(el("button", {
+          className: "btn btn-danger btn-sm",
+          text: "Yoklamayı iptal et",
+          on: { click: () => deleteAbsence(ab) },
+        }));
+        card.appendChild(actions);
+
+        area.appendChild(card);
+      }
+    }
   }
 
-  // ========== ANALYTICS (Phase 3) ==========
+  function buildAbsenceTeacherRow(t, gun) {
+    const pending = pendingAbsences.get(t.id) || { active: false, overrides: new Map() };
+    const container = el("div");
+
+    const row = el("div", { className: "absence-teacher-row" });
+    const left = el("div");
+    left.appendChild(el("div", { style: "font-weight:600;", text: t.name }));
+    const dayLessons = state.lessons.filter(l => l.teacherId === t.id && l.gun === gun).sort((a,b) => parseHM(a.bas) - parseHM(b.bas));
+    left.appendChild(el("div", { style: "font-family: var(--font-mono); font-size:11px; color: var(--muted); margin-top:2px;", text: dayLessons.length + " ders" }));
+    row.appendChild(left);
+
+    const right = el("div", { style: "display:flex; align-items:center; gap:10px;" });
+    right.appendChild(el("span", { style: "font-family: var(--font-mono); font-size:11px; color: " + (pending.active ? "var(--err)" : "var(--muted)") + ";", text: pending.active ? "YOK" : "Var" }));
+    const sw = el("div", { className: "switch" + (pending.active ? " on" : "") });
+    sw.addEventListener("click", () => {
+      if (!pending.active) {
+        pendingAbsences.set(t.id, { active: true, overrides: new Map() });
+      } else {
+        pendingAbsences.delete(t.id);
+      }
+      renderAbsences();
+    });
+    right.appendChild(sw);
+    row.appendChild(right);
+    container.appendChild(row);
+
+    if (pending.active) {
+      if (!dayLessons.length) {
+        container.appendChild(el("div", { className: "day-empty-admin", text: "Bu gün hiç dersi yok — yoklama kaydı gerekmez" }));
+      } else {
+        for (const lesson of dayLessons) {
+          container.appendChild(buildAbsenceLessonRow(t, lesson, pending));
+        }
+        // Save button
+        const actions = el("div", { style: "display:flex; justify-content:flex-end; gap:8px; margin-top:10px;" });
+        actions.appendChild(el("button", {
+          className: "btn btn-secondary btn-sm",
+          text: "Vazgeç",
+          on: { click: () => { pendingAbsences.delete(t.id); renderAbsences(); } },
+        }));
+        actions.appendChild(el("button", {
+          className: "btn btn-primary btn-sm",
+          text: "Yoklamayı kaydet",
+          on: { click: () => submitAbsence(t, dayLessons) },
+        }));
+        container.appendChild(actions);
+      }
+    }
+    return container;
+  }
+
+  function buildAbsenceLessonRow(teacher, lesson, pending) {
+    const row = el("div", { className: "absence-lesson" });
+    const metaBlock = el("div");
+    metaBlock.appendChild(el("div", { style: "font-weight:600;", text: lesson.ad }));
+    metaBlock.appendChild(el("div", { className: "meta", text: lesson.bas + "–" + lesson.bit + (lesson.lab ? " · " + lesson.lab + "-Lab" : "") }));
+    row.appendChild(metaBlock);
+
+    const subs = availableSubstitutes(lesson, teacher.id, state.lessons, state.absences, state.absenceDate);
+    const sel = el("select");
+    const optCancel = el("option", { attrs: { value: "cancel" }, text: "İptal (ders yok)" });
+    sel.appendChild(optCancel);
+    for (const t of subs) {
+      sel.appendChild(el("option", { attrs: { value: "transfer:" + t.id }, text: "→ " + t.name }));
+    }
+    // Default: first available substitute, else cancel
+    const current = pending.overrides.get(lesson.id);
+    if (current) {
+      sel.value = current.action === "transfer" ? "transfer:" + current.substituteTeacherId : "cancel";
+    } else if (subs.length) {
+      sel.value = "transfer:" + subs[0].id;
+      pending.overrides.set(lesson.id, { action: "transfer", substituteTeacherId: subs[0].id });
+    } else {
+      sel.value = "cancel";
+      pending.overrides.set(lesson.id, { action: "cancel" });
+    }
+    sel.addEventListener("change", () => {
+      const v = sel.value;
+      if (v === "cancel") pending.overrides.set(lesson.id, { action: "cancel" });
+      else pending.overrides.set(lesson.id, { action: "transfer", substituteTeacherId: v.slice("transfer:".length) });
+    });
+    row.appendChild(sel);
+    return row;
+  }
+
+  async function submitAbsence(teacher, dayLessons) {
+    const pending = pendingAbsences.get(teacher.id);
+    if (!pending) return;
+    const overrides = dayLessons.map(l => {
+      const ov = pending.overrides.get(l.id);
+      return ov ? { lessonId: l.id, ...ov } : { lessonId: l.id, action: "cancel" };
+    });
+    try {
+      const r = await api("POST", "/api/absences", {
+        date: state.absenceDate,
+        teacherId: teacher.id,
+        lessonOverrides: overrides,
+        note: "",
+      });
+      state.absences.push(r.absence);
+      pendingAbsences.delete(teacher.id);
+      updateCounts();
+      renderAbsences();
+      toast("Yoklama kaydedildi", "ok");
+    } catch (err) {
+      toast(err.message || "Kaydedilemedi", "err");
+    }
+  }
+
+  async function deleteAbsence(ab) {
+    if (!confirm("Bu yoklama kaydı silinsin mi?")) return;
+    try {
+      await api("DELETE", "/api/absences/" + ab.id);
+      state.absences = state.absences.filter(x => x.id !== ab.id);
+      updateCounts();
+      renderAbsences();
+      toast("Silindi", "ok");
+    } catch (err) {
+      toast(err.message || "Silinemedi", "err");
+    }
+  }
+
+  // ========== ANALYTICS ==========
   function renderAnalytics() {
     const area = document.getElementById("analytics-area");
     clear(area);
-    area.appendChild(el("div", { className: "alert alert-info", text: "Analiz sekmesi Phase 3'te doldurulacak." }));
+
+    // Top stats
+    const stats = el("div", { className: "stats-grid" });
+    stats.appendChild(buildStat("Toplam ders", String(state.lessons.length), "haftalık"));
+    stats.appendChild(buildStat("Öğretmen", String(state.teachers.length), ""));
+    const totalMin = state.lessons.reduce((s, l) => s + (parseHM(l.bit) - parseHM(l.bas)), 0);
+    stats.appendChild(buildStat("Toplam süre", Math.round(totalMin / 60) + " saat", Math.round(totalMin) + " dk"));
+
+    // Conflicts
+    const conflicts = findAllConflictsClient(state.lessons);
+    const conflictStat = buildStat("Çakışma", String(conflicts.length), conflicts.length ? "⚠ inceleyin" : "✓ temiz");
+    stats.appendChild(conflictStat);
+    area.appendChild(stats);
+
+    // Lab utilization
+    const labCard = el("div", { className: "stat-card" });
+    labCard.appendChild(el("div", { className: "stat-label", text: "Lab doluluğu (haftalık)" }));
+    const util = el("div", { className: "lab-util" });
+    const LABS2 = [["i","İlkokul Lab","--lab-i"],["O","Ortaokul Lab","--lab-o"],["L","Lise Lab","--lab-l"]];
+    const WEEK_MIN = 5 * 8 * 60; // 5 gün × 8 saat
+    for (const [k, name] of LABS2) {
+      const mins = state.lessons.filter(l => l.lab === k).reduce((s, l) => s + (parseHM(l.bit) - parseHM(l.bas)), 0);
+      const pct = Math.min(100, Math.round((mins / WEEK_MIN) * 100));
+      const row = el("div", { className: "lab-util-row" });
+      row.appendChild(el("span", { text: name }));
+      const bar = el("div", { className: "lab-util-bar" });
+      bar.appendChild(el("span", { className: "pct-" + k, style: "width:" + pct + "%;" }));
+      row.appendChild(bar);
+      row.appendChild(el("span", { text: pct + "% · " + Math.round(mins/60) + "sa" }));
+      util.appendChild(row);
+    }
+    labCard.appendChild(util);
+    area.appendChild(labCard);
+
+    // Teachers table
+    const teacherCard = el("div", { className: "stat-card", style: "margin-top:12px;" });
+    teacherCard.appendChild(el("div", { className: "stat-label", text: "Öğretmen başına yük" }));
+    const tlist = el("div", { className: "lab-util" });
+    for (const t of state.teachers) {
+      const ls = state.lessons.filter(l => l.teacherId === t.id);
+      const m = ls.reduce((s, l) => s + (parseHM(l.bit) - parseHM(l.bas)), 0);
+      const r = el("div", { className: "lab-util-row" });
+      r.appendChild(el("span", { text: t.name }));
+      r.appendChild(el("span", { text: ls.length + " ders" }));
+      r.appendChild(el("span", { text: Math.round(m / 60 * 10) / 10 + " sa" }));
+      tlist.appendChild(r);
+    }
+    teacherCard.appendChild(tlist);
+    area.appendChild(teacherCard);
+
+    // Conflicts table
+    if (conflicts.length) {
+      const cCard = el("div", { className: "stat-card", style: "margin-top:12px; border-color: var(--err);" });
+      cCard.appendChild(el("div", { className: "stat-label", style: "color: var(--err)", text: "Çakışmalar" }));
+      const tById = Object.fromEntries(state.teachers.map(t => [t.id, t.name]));
+      for (const { a, b } of conflicts) {
+        const row = el("div", { style: "padding:6px 0; border-top: 1px solid var(--line-soft); font-size:12px;" });
+        row.appendChild(el("div", { text: GUN_AD[a.gun] + " " + a.bas + "-" + a.bit + " · " + a.lab + "-Lab" }));
+        row.appendChild(el("div", { style: "color: var(--muted); font-family: var(--font-mono); font-size: 11px;", text: `${a.ad} (${tById[a.teacherId]}) ↔ ${b.ad} (${tById[b.teacherId]})` }));
+        cCard.appendChild(row);
+      }
+      area.appendChild(cCard);
+    }
+  }
+
+  function buildStat(label, value, sub) {
+    const c = el("div", { className: "stat-card" });
+    c.appendChild(el("div", { className: "stat-label", text: label }));
+    c.appendChild(el("div", { className: "stat-value", text: value }));
+    if (sub) c.appendChild(el("div", { className: "stat-sub", text: sub }));
+    return c;
+  }
+
+  function findAllConflictsClient(lessons) {
+    const out = [];
+    const seen = new Set();
+    for (let i = 0; i < lessons.length; i++) {
+      for (let j = i + 1; j < lessons.length; j++) {
+        const a = lessons[i], b = lessons[j];
+        if (!a.lab || !b.lab) continue;
+        if (a.lab !== b.lab) continue;
+        if (a.teacherId === b.teacherId) continue;
+        if (a.gun !== b.gun) continue;
+        if (parseHM(a.bas) < parseHM(b.bit) && parseHM(b.bas) < parseHM(a.bit)) {
+          const key = [a.id, b.id].sort().join("|");
+          if (seen.has(key)) continue;
+          seen.add(key);
+          out.push({ a, b });
+        }
+      }
+    }
+    return out;
   }
 
   // ---------- Clock ----------
