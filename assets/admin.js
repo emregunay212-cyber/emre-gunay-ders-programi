@@ -1023,9 +1023,12 @@
 
   function buildAbsenceTeacherRow(t, gun) {
     const pending = pendingAbsences.get(t.id) || { active: false, overrides: new Map() };
+    // Check if a yoklama is already saved for this teacher on the selected date.
+    const savedAbsence = state.absences.find(a => a.teacherId === t.id && a.date === state.absenceDate);
     const container = el("div");
 
-    const row = el("div", { className: "absence-teacher-row" + (pending.active ? " absent" : "") });
+    const isAbsent = pending.active || !!savedAbsence;
+    const row = el("div", { className: "absence-teacher-row" + (isAbsent ? " absent" : "") });
     const left = el("div", { className: "left" });
     left.appendChild(el("div", { className: "t-avatar", text: initials(t.name) }));
     const names = el("div");
@@ -1036,24 +1039,34 @@
     row.appendChild(left);
 
     const right = el("div", { style: "display:flex; align-items:center; gap:12px;" });
-    right.appendChild(el("span", {
-      style: "font-family: var(--font-mono); font-size:11px; letter-spacing: 0.12em; text-transform: uppercase; color: " + (pending.active ? "var(--err)" : "var(--muted)"),
-      text: pending.active ? "YOK" : "Var",
-    }));
-    const sw = el("div", { className: "switch" + (pending.active ? " on" : ""), attrs: { role: "switch", "aria-checked": pending.active ? "true" : "false" } });
-    sw.addEventListener("click", () => {
-      if (!pending.active) {
-        pendingAbsences.set(t.id, { active: true, overrides: new Map() });
-      } else {
-        pendingAbsences.delete(t.id);
-      }
-      renderAbsences();
-    });
-    right.appendChild(sw);
+    if (savedAbsence) {
+      // Already recorded: show locked "YOK · Kayıt var" label, no toggle.
+      right.appendChild(el("span", {
+        style: "font-family: var(--font-mono); font-size:11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--err);",
+        text: "YOK · Kayıt var",
+      }));
+      const sw = el("div", { className: "switch on", style: "opacity:0.45; cursor:default;", attrs: { role: "switch", "aria-checked": "true", "aria-disabled": "true" } });
+      right.appendChild(sw);
+    } else {
+      right.appendChild(el("span", {
+        style: "font-family: var(--font-mono); font-size:11px; letter-spacing: 0.12em; text-transform: uppercase; color: " + (pending.active ? "var(--err)" : "var(--muted)"),
+        text: pending.active ? "YOK" : "Var",
+      }));
+      const sw = el("div", { className: "switch" + (pending.active ? " on" : ""), attrs: { role: "switch", "aria-checked": pending.active ? "true" : "false" } });
+      sw.addEventListener("click", () => {
+        if (!pending.active) {
+          pendingAbsences.set(t.id, { active: true, overrides: new Map() });
+        } else {
+          pendingAbsences.delete(t.id);
+        }
+        renderAbsences();
+      });
+      right.appendChild(sw);
+    }
     row.appendChild(right);
     container.appendChild(row);
 
-    if (pending.active) {
+    if (pending.active && !savedAbsence) {
       if (!dayLessons.length) {
         container.appendChild(el("div", { className: "day-empty-admin", text: "Bu gün hiç dersi yok — yoklama kaydı gerekmez" }));
       } else {
