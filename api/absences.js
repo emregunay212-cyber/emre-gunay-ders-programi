@@ -125,14 +125,22 @@ export default async function handler(req, res) {
       const { errs, out } = validateAbsence(body, teachers, lessons);
       if (errs.length) return badRequest(res, errs.join(" · "));
 
-      const absenceId = await nextId("a");
+      // Idempotency: if an absence already exists for (teacherId, date), upsert it.
+      // This prevents duplicate records when admin double-clicks "Kaydet" or retries
+      // after a slow network. Admin can also re-save the same day to edit it.
+      const existingIdx = absences.findIndex(
+        a => a.teacherId === out.teacherId && a.date === out.date
+      );
+      const isUpdate = existingIdx >= 0;
+      const absenceId = isUpdate ? absences[existingIdx].id : await nextId("a");
       const absence = {
         id: absenceId,
         date: out.date,
         teacherId: out.teacherId,
         lessonOverrides: [],
         note: out.note,
-        createdAt: new Date().toISOString(),
+        createdAt: isUpdate ? absences[existingIdx].createdAt : new Date().toISOString(),
+        updatedAt: isUpdate ? new Date().toISOString() : undefined,
       };
 
       // Sign tokens for each transfer first (need absenceId)
@@ -147,7 +155,9 @@ export default async function handler(req, res) {
         absence.lessonOverrides.push(ov);
       }
 
-      const nextAbsences = [...absences, absence];
+      const nextAbsences = isUpdate
+        ? absences.map((a, i) => (i === existingIdx ? absence : a))
+        : [...absences, absence];
       await saveAbsences(nextAbsences);
 
       // Fire notifications (best-effort, don't fail the request on errors)

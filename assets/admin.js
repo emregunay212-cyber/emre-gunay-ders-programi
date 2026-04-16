@@ -855,13 +855,60 @@
     const dow = new Date(isoDate + "T00:00:00").getDay();
     return (dow >= 1 && dow <= 5) ? dow : null;
   }
-  function availableSubstitutes(targetLesson, teacherId, lessons, absences, date) {
+  function availableSubstitutes(targetLesson, absentTeacherId, lessons, absences, date, pendingAbsencesMap, currentPending) {
     const gun = targetLesson.gun;
     const basA = parseHM(targetLesson.bas), bitA = parseHM(targetLesson.bit);
+
+    // 1) Saved absences: teachers already marked absent on this date
     const absentThatDay = new Set((absences || []).filter(a => a.date === date).map(a => a.teacherId));
+
+    // 2) Pending UI absences: teachers marked absent in admin's current session but not yet saved.
+    //    Without this, a teacher marked absent via the switch would still appear as a
+    //    valid substitute for another absent teacher — causing cross-assignment bugs.
+    if (pendingAbsencesMap) {
+      for (const [tid, p] of pendingAbsencesMap) {
+        if (p && p.active) absentThatDay.add(tid);
+      }
+    }
+
+    // 3) Within the same pending absence, if a substitute is already assigned to another
+    //    lesson whose time overlaps the target lesson, that substitute cannot take this one too.
+    const overlappingSubsInThisPending = new Set();
+    if (currentPending && currentPending.overrides) {
+      for (const [lid, ov] of currentPending.overrides) {
+        if (lid === targetLesson.id) continue;
+        if (!ov || ov.action !== "transfer") continue;
+        const l = lessons.find(x => x.id === lid);
+        if (!l || l.gun !== gun) continue;
+        if (parseHM(l.bas) < bitA && basA < parseHM(l.bit)) {
+          overlappingSubsInThisPending.add(ov.substituteTeacherId);
+        }
+      }
+    }
+
+    // 4) Cross-pending: substitutes already assigned to overlapping lessons in OTHER
+    //    pending absences (admin editing multiple teachers at once in the same session).
+    const overlappingSubsCrossPending = new Set();
+    if (pendingAbsencesMap) {
+      for (const [tid, p] of pendingAbsencesMap) {
+        if (!p || !p.active || !p.overrides) continue;
+        if (currentPending && tid === absentTeacherId) continue; // skip self
+        for (const [lid, ov] of p.overrides) {
+          if (!ov || ov.action !== "transfer") continue;
+          const l = lessons.find(x => x.id === lid);
+          if (!l || l.gun !== gun) continue;
+          if (parseHM(l.bas) < bitA && basA < parseHM(l.bit)) {
+            overlappingSubsCrossPending.add(ov.substituteTeacherId);
+          }
+        }
+      }
+    }
+
     return state.teachers.filter(t => {
-      if (t.id === teacherId) return false;
+      if (t.id === absentTeacherId) return false;
       if (absentThatDay.has(t.id)) return false;
+      if (overlappingSubsInThisPending.has(t.id)) return false;
+      if (overlappingSubsCrossPending.has(t.id)) return false;
       const busy = lessons.some(l =>
         l.teacherId === t.id && l.gun === gun
         && parseHM(l.bas) < bitA && basA < parseHM(l.bit)
@@ -1019,11 +1066,12 @@
           text: "Vazgeç",
           on: { click: () => { pendingAbsences.delete(t.id); renderAbsences(); } },
         }));
-        actions.appendChild(el("button", {
+        const saveBtn = el("button", {
           className: "btn btn-primary btn-sm",
           text: "Kaydet",
-          on: { click: () => submitAbsence(t, dayLessons) },
-        }));
+        });
+        saveBtn.addEventListener("click", () => submitAbsence(t, dayLessons, saveBtn));
+        actions.appendChild(saveBtn);
         container.appendChild(actions);
       }
     }
@@ -1042,7 +1090,10 @@
     info.appendChild(meta);
     row.appendChild(info);
 
-    const subs = availableSubstitutes(lesson, teacher.id, state.lessons, state.absences, state.absenceDate);
+    const subs = availableSubstitutes(
+      lesson, teacher.id, state.lessons, state.absences,
+      state.absenceDate, pendingAbsences, pending
+    );
     const sel = el("select");
     sel.appendChild(el("option", { attrs: { value: "cancel" }, text: "İptal (ders yok)" }));
     for (const t of subs) {
@@ -1069,14 +1120,27 @@
       if (v === "cancel") pending.overrides.set(lesson.id, { action: "cancel" });
       else pending.overrides.set(lesson.id, { action: "transfer", substituteTeacherId: v.slice("transfer:".length) });
       applyMode();
+      // Recompute substitute lists on all other lesson rows so already-assigned
+      // substitutes no longer appear in overlapping slots.
+      renderAbsences();
     });
     row.appendChild(sel);
     return row;
   }
 
-  async function submitAbsence(teacher, dayLessons) {
+  async function submitAbsence(teacher, dayLessons, saveBtn) {
     const pending = pendingAbsences.get(teacher.id);
     if (!pending) return;
+    // Guard: prevent double-submit from rapid clicks or slow-network retries.
+    if (pending.submitting) return;
+    pending.submitting = true;
+
+    const originalText = saveBtn ? saveBtn.textContent : null;
+    if (saveBtn) {
+      saveBtn.disabled = true;
+      saveBtn.textContent = "Kaydediliyor…";
+    }
+
     const overrides = dayLessons.map(l => {
       const ov = pending.overrides.get(l.id);
       return ov ? { lessonId: l.id, ...ov } : { lessonId: l.id, action: "cancel" };
@@ -1088,7 +1152,10 @@
         lessonOverrides: overrides,
         note: "",
       });
-      state.absences.push(r.absence);
+      // Upsert on server may return an existing id — replace local copy if present.
+      const idx = state.absences.findIndex(a => a.id === r.absence.id);
+      if (idx >= 0) state.absences[idx] = r.absence;
+      else state.absences.push(r.absence);
       pendingAbsences.delete(teacher.id);
       updateStats();
       renderAbsences();
@@ -1096,6 +1163,12 @@
       try { localStorage.removeItem("bt.schedules.cache.v2"); } catch {}
       toast("Yoklama kaydedildi", "ok");
     } catch (err) {
+      // On failure, clear the guard so user can retry; restore button state.
+      pending.submitting = false;
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = originalText || "Kaydet";
+      }
       toast(err.message || "Kaydedilemedi", "err");
     }
   }
