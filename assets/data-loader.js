@@ -30,17 +30,23 @@
     try { localStorage.setItem(CACHE_KEY, JSON.stringify({ at: Date.now(), data })); } catch {}
   }
 
+  function mapLesson(l) {
+    return {
+      gun: l.gun, bas: l.bas, bit: l.bit,
+      ad: l.ad, lab: l.lab || "", kademe: l.kademe,
+      substitute: !!l.substitute,
+      originalTeacherId: l.originalTeacherId || null,
+      onlyOn: l.onlyOn || null,      // substitute lesson valid only on this date
+      hiddenOn: l.hiddenOn || null,  // original lesson hidden on these dates
+    };
+  }
+
   function buildScheduleForSlug(api, slug) {
     const t = (api.teachers || []).find(x => x.slug === slug);
     if (!t) return null;
     const program = (api.lessons || [])
       .filter(l => l.teacherId === t.id)
-      .map(l => ({
-        gun: l.gun, bas: l.bas, bit: l.bit,
-        ad: l.ad, lab: l.lab || "", kademe: l.kademe,
-        substitute: !!l.substitute,
-        originalTeacherId: l.originalTeacherId || null,
-      }));
+      .map(mapLesson);
     return { slug: t.slug, teacher: t.name, program };
   }
 
@@ -50,12 +56,7 @@
       teacher: t.name,
       program: (api.lessons || [])
         .filter(l => l.teacherId === t.id)
-        .map(l => ({
-          gun: l.gun, bas: l.bas, bit: l.bit,
-          ad: l.ad, lab: l.lab || "", kademe: l.kademe,
-          substitute: !!l.substitute,
-          originalTeacherId: l.originalTeacherId || null,
-        })),
+        .map(mapLesson),
     }));
   }
 

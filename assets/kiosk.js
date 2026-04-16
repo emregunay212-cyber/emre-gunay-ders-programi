@@ -51,8 +51,14 @@
 
   function labLessons(labKey, gun) {
     if (!apiData) return [];
+    const today = apiData.date; // YYYY-MM-DD from server
     return (apiData.lessons || [])
       .filter(l => l.lab === labKey && l.gun === gun)
+      .filter(l => {
+        if (l.onlyOn && l.onlyOn !== today) return false;
+        if (Array.isArray(l.hiddenOn) && l.hiddenOn.includes(today)) return false;
+        return true;
+      })
       .sort((a, b) => parseHM(a.bas) - parseHM(b.bas));
   }
 

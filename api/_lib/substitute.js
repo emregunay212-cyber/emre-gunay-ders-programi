@@ -1,10 +1,16 @@
-// Apply absence overrides to lesson list for a given date (YYYY-MM-DD).
-// For each lesson affected by an absence record on that date:
-//  - action "cancel" → lesson is removed
-//  - action "transfer" → lesson's teacherId is rewritten to substituteTeacherId,
-//    and marked { substitute: true, originalTeacherId }
+// Apply absence overrides to the lesson list.
 //
-// Returned lessons retain all original fields + optional substitute metadata.
+// Two modes:
+//  1) applyAbsencesForDate(lessons, absences, "YYYY-MM-DD")
+//     → returns lessons with overrides for that exact date applied (used for kiosk).
+//
+//  2) applyCurrentAndFutureAbsences(lessons, absences, todayStr)
+//     → returns the recurring weekly program, PLUS any one-off substitute lessons
+//       for today-or-future dates (added as new entries with a `date` field).
+//     → absent teacher's own cancellation/transfer is also marked with `date`
+//       so the UI can hide them once the date has passed.
+//     This is what the weekly teacher pages use so a "tomorrow's transfer"
+//     shows up on the substitute teacher's weekly view immediately.
 
 export function applyAbsencesForDate(lessons, absences, dateStr) {
   if (!Array.isArray(absences) || !absences.length) return lessons.map(l => ({ ...l }));
@@ -43,6 +49,54 @@ export function applyAbsencesForDate(lessons, absences, dateStr) {
     }
   }
   return out;
+}
+
+// JS day (0=Sun..6=Sat) → prog gun (1=Mon..5=Fri) or null
+export function isoToProgGun(dateStr) {
+  // Parse as UTC noon to avoid timezone-bound day shifts
+  const d = new Date(dateStr + "T12:00:00Z");
+  const dow = d.getUTCDay();
+  return (dow >= 1 && dow <= 5) ? dow : null;
+}
+
+// Apply all current+future absences to the weekly program.
+// For each absence on date >= todayStr:
+//   - cancel  → mark original lesson with `hiddenOn: date`
+//   - transfer → mark original with `hiddenOn: date`, and add a NEW lesson entry
+//                for the substitute teacher with `onlyOn: date`, `substitute: true`.
+// Lessons carry `hiddenOn` / `onlyOn` so the client knows these are one-off.
+export function applyCurrentAndFutureAbsences(lessons, absences, todayStr) {
+  const base = lessons.map(l => ({ ...l }));
+  const added = [];
+  const relevant = (absences || []).filter(a => a.date >= todayStr);
+  if (!relevant.length) return base;
+
+  const byId = new Map(base.map(l => [l.id, l]));
+
+  for (const ab of relevant) {
+    for (const ov of (ab.lessonOverrides || [])) {
+      const l = byId.get(ov.lessonId);
+      if (!l) continue;
+
+      // Mark the original lesson as hidden on that specific date
+      if (!Array.isArray(l.hiddenOn)) l.hiddenOn = [];
+      l.hiddenOn.push(ab.date);
+
+      if (ov.action === "transfer" && ov.substituteTeacherId) {
+        added.push({
+          ...l,
+          id: l.id + "@" + ab.date,
+          teacherId: ov.substituteTeacherId,
+          substitute: true,
+          originalTeacherId: ab.teacherId,
+          absenceId: ab.id,
+          onlyOn: ab.date,
+          hiddenOn: undefined, // substitute copy is NOT hidden
+        });
+      }
+    }
+  }
+  return base.concat(added);
 }
 
 export function todayStr(tz = "Europe/Istanbul") {

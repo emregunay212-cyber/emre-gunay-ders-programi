@@ -41,13 +41,26 @@
   function clear(node) { while (node.firstChild) node.removeChild(node.firstChild); }
 
   // ----- Data -----
+  function pad2(n) { return String(n).padStart(2, "0"); }
+  function isoDateForProgGun(now, gun) {
+    const today = now.getDay();
+    const todayGun = today === 0 ? 7 : today;
+    const target = new Date(now);
+    target.setDate(target.getDate() + (gun - todayGun));
+    return target.getFullYear() + "-" + pad2(target.getMonth() + 1) + "-" + pad2(target.getDate());
+  }
   function collectIntervals(labKey, gun) {
     const out = [];
+    const now = new Date();
+    const gunDate = isoDateForProgGun(now, gun);
     for (const sch of (window.ALL_SCHEDULES || [])) {
       for (const p of sch.program) {
-        if (p.lab === labKey && p.gun === gun) {
-          out.push({ bas: parseHM(p.bas), bit: parseHM(p.bit) });
-        }
+        if (p.lab !== labKey || p.gun !== gun) continue;
+        // One-off substitute copies: only count on their matching date
+        if (p.onlyOn && p.onlyOn !== gunDate) continue;
+        // Originals hidden on this date (cancel/transfer)
+        if (Array.isArray(p.hiddenOn) && p.hiddenOn.includes(gunDate)) continue;
+        out.push({ bas: parseHM(p.bas), bit: parseHM(p.bit) });
       }
     }
     out.sort((a, b) => a.bas - b.bas || a.bit - b.bit);

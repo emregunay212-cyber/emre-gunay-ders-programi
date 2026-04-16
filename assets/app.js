@@ -28,15 +28,39 @@
   function formatDate(d) { return GUN_AD[d.getDay()] + ", " + d.getDate() + " " + AY_AD[d.getMonth()]; }
   function nowMinutes(d) { return d.getHours() * 60 + d.getMinutes() + d.getSeconds() / 60; }
 
-  // Substitute lessons are one-time transfers from an absent teacher.
-  // Once their end time passes, remove them from view entirely (not just "done").
-  function filterExpiredSubstitutes(prog, d) {
-    const todayG = jsDayToProgGun(d.getDay());
-    const m = nowMinutes(d);
+  // Produce the ISO date (YYYY-MM-DD) this week for a given prog gun (1..5).
+  // Used to match one-off substitute/absence dates to weekday slots.
+  function pad2(n) { return String(n).padStart(2, "0"); }
+  function isoDateForProgGun(now, gun) {
+    const today = now.getDay();           // 0..6 (Sun..Sat)
+    const todayGun = today === 0 ? 7 : today; // Mon=1..Sun=7
+    const targetGun = gun;                // 1..5
+    const diff = targetGun - todayGun;    // days from today
+    const target = new Date(now);
+    target.setDate(target.getDate() + diff);
+    return target.getFullYear() + "-" + pad2(target.getMonth() + 1) + "-" + pad2(target.getDate());
+  }
+
+  // Filter the program for the current moment:
+  //  - substitute (onlyOn) lessons: only kept if onlyOn matches this week's gun date,
+  //    AND (if today) the lesson hasn't ended yet.
+  //  - originals with hiddenOn: dropped on those specific dates.
+  function applyOneOffs(prog, now) {
+    const todayG = jsDayToProgGun(now.getDay());
+    const m = nowMinutes(now);
     return prog.filter(p => {
-      if (!p.substitute) return true;
-      if (p.gun !== todayG) return true; // defensive
-      return parseHM(p.bit) > m;          // still ongoing or upcoming
+      const gunDate = isoDateForProgGun(now, p.gun);
+      if (p.onlyOn) {
+        // Only show this copy on its matching date
+        if (p.onlyOn !== gunDate) return false;
+        // If it's today, hide after its end time
+        if (p.gun === todayG && parseHM(p.bit) <= m) return false;
+        return true;
+      }
+      if (Array.isArray(p.hiddenOn) && p.hiddenOn.includes(gunDate)) {
+        return false;
+      }
+      return true;
     });
   }
 
@@ -232,8 +256,10 @@
     document.getElementById("date").textContent = formatDate(d);
     const teacherEl = document.getElementById("teacher-name");
     if (teacherEl && !teacherEl.textContent) teacherEl.textContent = data.teacher;
-    // Hide substitute (one-time) lessons once their end time passes
-    const prog = filterExpiredSubstitutes(data.program || [], d);
+    // Apply one-off absence/transfer rules for this week:
+    //  - Keep a substitute (onlyOn) only on its exact date, hide after it ends today.
+    //  - Drop originals flagged as hidden for this week's date.
+    const prog = applyOneOffs(data.program || [], d);
     renderNow(d, prog);
     renderNext(d, prog);
     renderWeekly(d, prog);
