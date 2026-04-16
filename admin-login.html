@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="theme-color" content="#0a0b10" />
+<title>Admin Giriş · BT Ders Programı</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="assets/admin.css" />
+</head>
+<body class="login-page">
+<div class="login-box">
+  <div class="login-eyebrow">Admin Paneli</div>
+  <h1 class="login-title">Giriş yap</h1>
+
+  <div id="err" class="alert alert-err" style="display:none"></div>
+
+  <form id="login-form" autocomplete="off">
+    <div class="field">
+      <label for="password">Şifre</label>
+      <input type="password" id="password" name="password" required autofocus />
+    </div>
+    <div class="form-actions">
+      <a href="index.html" class="btn btn-secondary">İptal</a>
+      <button type="submit" class="btn btn-primary" id="submit-btn">Giriş yap</button>
+    </div>
+  </form>
+</div>
+
+<script>
+(function () {
+  const form = document.getElementById("login-form");
+  const errEl = document.getElementById("err");
+  const btn = document.getElementById("submit-btn");
+
+  // If already logged in, redirect
+  fetch("/api/auth/me", { credentials: "same-origin" })
+    .then(r => r.ok ? r.json() : null)
+    .then(j => { if (j && j.admin) location.replace("admin.html"); })
+    .catch(() => {});
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    errEl.style.display = "none";
+    btn.disabled = true; btn.textContent = "Giriş yapılıyor...";
+    try {
+      const password = document.getElementById("password").value;
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ password }),
+      });
+      if (res.ok) {
+        location.replace("admin.html");
+        return;
+      }
+      const data = await res.json().catch(() => ({}));
+      errEl.textContent = data.error || "Giriş başarısız";
+      errEl.style.display = "block";
+    } catch (err) {
+      errEl.textContent = "Ağ hatası. Tekrar dene.";
+      errEl.style.display = "block";
+    } finally {
+      btn.disabled = false; btn.textContent = "Giriş yap";
+    }
+  });
+})();
+</script>
+</body>
+</html>
