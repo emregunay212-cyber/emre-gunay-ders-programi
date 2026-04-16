@@ -73,28 +73,24 @@
 
   /* ---------- Masthead (minimal) ---------- */
   .masthead {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 14px;
-    padding: 4px 0 28px;
-    margin-bottom: 28px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-rows: auto auto;
+    column-gap: 16px;
+    row-gap: 6px;
+    padding: 4px 0 22px;
+    margin-bottom: 24px;
     border-bottom: 1px solid var(--line-soft);
-    flex-wrap: wrap;
+    align-items: baseline;
     animation: fade-in 600ms ease;
   }
   @keyframes fade-in {
     from { opacity: 0; }
     to { opacity: 1; }
   }
-  .masthead-left {
-    display: flex;
-    align-items: baseline;
-    gap: 14px;
-    flex-wrap: wrap;
-    min-width: 0;
-  }
   .masthead-mark {
+    grid-column: 1;
+    grid-row: 1;
     font-family: var(--font-mono);
     font-size: 10px;
     font-weight: 700;
@@ -104,42 +100,61 @@
     white-space: nowrap;
   }
   .masthead-title {
+    grid-column: 1;
+    grid-row: 2;
     font-family: var(--font-display);
     font-weight: 400;
     font-style: italic;
-    font-size: clamp(18px, 2.4vw, 22px);
+    font-size: clamp(17px, 2.4vw, 22px);
     letter-spacing: -0.01em;
-    line-height: 1;
+    line-height: 1.15;
     color: var(--text);
     margin: 0;
   }
   .masthead-title em {
     font-style: normal;
     font-family: var(--font-body);
-    font-weight: 600;
+    font-weight: 500;
     color: var(--muted);
-    margin-left: 8px;
+    font-size: 0.82em;
+    margin-left: 6px;
   }
   .clock-box {
+    grid-column: 2;
+    grid-row: 1 / span 2;
     text-align: right;
-    line-height: 1.1;
-    flex-shrink: 0;
+    line-height: 1;
+    align-self: center;
   }
   .clock-val {
     font-family: var(--font-mono);
-    font-size: clamp(14px, 2vw, 16px);
-    font-weight: 500;
-    letter-spacing: -0.01em;
+    font-size: clamp(22px, 5vw, 26px);
+    font-weight: 600;
+    letter-spacing: -0.02em;
     font-variant-numeric: tabular-nums;
     color: var(--text);
+    line-height: 1;
   }
   .clock-date {
     font-family: var(--font-mono);
-    font-size: 9px;
+    font-size: 10px;
     color: var(--muted);
     letter-spacing: 0.16em;
     text-transform: uppercase;
-    margin-top: 3px;
+    margin-top: 5px;
+    line-height: 1;
+  }
+
+  @media (max-width: 520px) {
+    .masthead {
+      padding-bottom: 18px;
+      margin-bottom: 20px;
+    }
+    .masthead-title em {
+      display: block;
+      margin-left: 0;
+      margin-top: 3px;
+    }
   }
 
   /* ---------- Live lab strip ---------- */
@@ -489,10 +504,8 @@
 <div class="page">
 
   <header class="masthead">
-    <div class="masthead-left">
-      <span class="masthead-mark">Bilnet Balıkesir</span>
-      <h1 class="masthead-title">Bilişim Teknolojileri <em>· ders programı</em></h1>
-    </div>
+    <span class="masthead-mark">Bilnet Balıkesir</span>
+    <h1 class="masthead-title">Bilişim Teknolojileri <em>Ders Programı</em></h1>
     <div class="clock-box">
       <div class="clock-val" id="clock">--:--:--</div>
       <div class="clock-date" id="date">—</div>
