@@ -2,8 +2,8 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<meta name="theme-color" content="#05070f" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="theme-color" content="#06070d" />
 <title>Lab Kiosk · Bilnet Balıkesir BT</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -11,22 +11,37 @@
 </head>
 <body>
 <div class="kiosk">
+
   <header class="kiosk-header">
     <div class="kiosk-title">
-      <h1>Bilişim Laboratuvarları</h1>
-      <span class="sub">Canlı</span>
+      <h1>Bilişim <em>Lab</em><br/>Panosu</h1>
+      <div class="sub">Canlı · Bilnet Balıkesir</div>
     </div>
-    <div>
+    <div class="kiosk-time">
       <div class="kiosk-clock" id="kiosk-clock">--:--</div>
       <div class="kiosk-date" id="kiosk-date">—</div>
     </div>
   </header>
 
+  <div class="offline-banner" id="offline-banner"></div>
+
   <main class="labs-board" id="labs-board"></main>
+
+  <nav class="lab-nav" aria-label="Lab seç">
+    <button class="nav-dot" data-lab="i" aria-label="İlkokul Lab"></button>
+    <button class="nav-dot" data-lab="O" aria-label="Ortaokul Lab"></button>
+    <button class="nav-dot" data-lab="L" aria-label="Lise Lab"></button>
+  </nav>
 
   <footer class="kiosk-footer">
     <span>Bilnet Balıkesir · Bilişim Teknolojileri</span>
-    <span>30 sn'de bir güncellenir</span>
+    <span class="refresh-indicator" id="refresh-ind">30 sn'de bir güncellenir</span>
+    <button class="refresh-btn" id="refresh-btn" title="Şimdi yenile">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+      </svg>
+      Yenile
+    </button>
   </footer>
 </div>
 <script src="assets/kiosk.js"></script>
