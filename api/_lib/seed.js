@@ -34,6 +34,28 @@ export async function ensureSeeded() {
   return { seeded: true, teachers: teachers.length, lessons: lessons.length };
 }
 
+// Dedupe absences by (teacherId, date) — if multiple records exist for the
+// same teacher+day (from pre-upsert duplicates), keep only the most recent
+// (by updatedAt/createdAt). This is a defensive read-side filter — the write
+// path (api/absences.js POST) already upserts to prevent new duplicates.
+function dedupeAbsences(absences) {
+  if (!Array.isArray(absences) || absences.length === 0) return absences || [];
+  const byKey = new Map();
+  for (const a of absences) {
+    if (!a || !a.teacherId || !a.date) continue;
+    const key = a.teacherId + "|" + a.date;
+    const existing = byKey.get(key);
+    if (!existing) {
+      byKey.set(key, a);
+      continue;
+    }
+    const ts = new Date(a.updatedAt || a.createdAt || 0).getTime();
+    const existingTs = new Date(existing.updatedAt || existing.createdAt || 0).getTime();
+    if (ts >= existingTs) byKey.set(key, a);
+  }
+  return Array.from(byKey.values());
+}
+
 // Read current state (auto-seeds on first read).
 export async function loadAll() {
   await ensureSeeded();
@@ -45,7 +67,7 @@ export async function loadAll() {
   return {
     teachers: teachers || [],
     lessons: lessons || [],
-    absences: absences || [],
+    absences: dedupeAbsences(absences || []),
   };
 }
 

@@ -62,6 +62,7 @@
     const slug = teacherSlug();
     if (!slug) return { ok: false, error: "no-slug" };
     if (!isPushSupported()) return { ok: false, error: "not-supported" };
+    let browserSub = null;
     try {
       const reg = await navigator.serviceWorker.register("/sw.js");
       await navigator.serviceWorker.ready;
@@ -69,19 +70,29 @@
       if (permission !== "granted") return { ok: false, error: "denied" };
       const vapid = await getVapidKey();
       if (!vapid) return { ok: false, error: "no-vapid" };
-      const sub = await reg.pushManager.subscribe({
+      browserSub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(vapid),
       });
-      const subJson = sub.toJSON();
+      const subJson = browserSub.toJSON();
       const res = await fetch("/api/push?action=subscribe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ teacherSlug: slug, subscription: subJson }),
       });
-      if (!res.ok) return { ok: false, error: "server-error" };
-      return { ok: true, subscription: sub };
+      if (!res.ok) {
+        // Server did not persist the subscription. Roll back the browser
+        // subscription so the UI doesn't show "Bildirim açık" while the
+        // server thinks this teacher has no sub (silent push failures).
+        try { await browserSub.unsubscribe(); } catch {}
+        let serverMsg = "server-error";
+        try { const j = await res.json(); if (j && j.error) serverMsg = j.error; } catch {}
+        return { ok: false, error: serverMsg };
+      }
+      return { ok: true, subscription: browserSub };
     } catch (err) {
+      // Any failure after creating the browser sub — roll it back.
+      if (browserSub) { try { await browserSub.unsubscribe(); } catch {} }
       console.error("Subscribe error:", err);
       return { ok: false, error: String(err && err.message || err) };
     }
@@ -106,6 +117,22 @@
     }
   }
 
+  // Resync an existing browser subscription with the server. Idempotent —
+  // /api/push?action=subscribe replaces on duplicate endpoint. This heals
+  // cases where the server lost/never saw a subscription but the browser
+  // still has one (push works only if both sides agree).
+  async function resyncSubscription(sub) {
+    const slug = teacherSlug();
+    if (!slug || !sub) return;
+    try {
+      await fetch("/api/push?action=subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ teacherSlug: slug, subscription: sub.toJSON() }),
+      });
+    } catch {}
+  }
+
   async function renderSubscribeButton() {
     const host = document.querySelector("header.top");
     if (!host) return;
@@ -126,6 +153,9 @@
 
     const permission = Notification.permission;
     const sub = await currentSubscription().catch(() => null);
+    // If the browser already has a sub, quietly re-upsert it to the server
+    // so previously-disconnected teachers start receiving push again.
+    if (sub) resyncSubscription(sub);
 
     if (permission === "denied") {
       btn.textContent = "🔕 Tarayıcı izin vermedi";
@@ -173,6 +203,10 @@
       if (!me) return [];
       const tById = Object.fromEntries((data.teachers || []).map(t => [t.id, t]));
       const lById = Object.fromEntries((data.lessons || []).map(l => [l.id, l]));
+      // Defensive dedupe: same (lessonId, absenceDate) should render only once
+      // even if backend briefly returns duplicate absence records (eventual
+      // consistency, legacy data, etc.).
+      const seen = new Set();
       const out = [];
       for (const ab of (data.absences || [])) {
         for (const ov of (ab.lessonOverrides || [])) {
@@ -182,6 +216,9 @@
           const lesson = lById[ov.lessonId];
           const absent = tById[ab.teacherId];
           if (!lesson || !absent) continue;
+          const key = ov.lessonId + "|" + ab.date;
+          if (seen.has(key)) continue;
+          seen.add(key);
           out.push({ absence: ab, override: ov, lesson, absent });
         }
       }
