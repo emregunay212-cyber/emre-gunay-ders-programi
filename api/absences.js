@@ -76,10 +76,15 @@ async function notifySubstitute({ absence, override, absentTeacher, substitute, 
   // ---- Push
   const pushPayload = {
     title: "Ders devri · Onay bekleniyor",
-    body: `${dateTR} · ${lesson.bas} ${lesson.ad} dersi ${absentTeacher.name} hocadan sana devrediliyor. Onaylar mısın?`,
+    body: `${dateTR} · ${lesson.bas} ${lesson.ad} dersi ${absentTeacher.name} hocadan sana devrediliyor.`,
     url: approvalUrl,
+    token: override.approvalToken, // SW calls /api/approve directly on action click
     requireInteraction: true,
     tag: "approval-" + override.lessonId + "-" + absence.date,
+    actions: [
+      { action: "approve", title: "✓ Onayla" },
+      { action: "reject",  title: "✗ Reddet" },
+    ],
   };
   const pushResult = await sendPushToTeacher(substitute, pushPayload).catch(() => ({ sent: 0, failed: 0, gone: [] }));
 
