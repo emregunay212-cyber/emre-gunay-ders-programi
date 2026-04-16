@@ -28,6 +28,18 @@
   function formatDate(d) { return GUN_AD[d.getDay()] + ", " + d.getDate() + " " + AY_AD[d.getMonth()]; }
   function nowMinutes(d) { return d.getHours() * 60 + d.getMinutes() + d.getSeconds() / 60; }
 
+  // Substitute lessons are one-time transfers from an absent teacher.
+  // Once their end time passes, remove them from view entirely (not just "done").
+  function filterExpiredSubstitutes(prog, d) {
+    const todayG = jsDayToProgGun(d.getDay());
+    const m = nowMinutes(d);
+    return prog.filter(p => {
+      if (!p.substitute) return true;
+      if (p.gun !== todayG) return true; // defensive
+      return parseHM(p.bit) > m;          // still ongoing or upcoming
+    });
+  }
+
   function findCurrent(d, prog) {
     const g = jsDayToProgGun(d.getDay());
     if (!g) return null;
@@ -220,9 +232,11 @@
     document.getElementById("date").textContent = formatDate(d);
     const teacherEl = document.getElementById("teacher-name");
     if (teacherEl && !teacherEl.textContent) teacherEl.textContent = data.teacher;
-    renderNow(d, data.program);
-    renderNext(d, data.program);
-    renderWeekly(d, data.program);
+    // Hide substitute (one-time) lessons once their end time passes
+    const prog = filterExpiredSubstitutes(data.program || [], d);
+    renderNow(d, prog);
+    renderNext(d, prog);
+    renderWeekly(d, prog);
   }
 
   document.addEventListener("DOMContentLoaded", function () {

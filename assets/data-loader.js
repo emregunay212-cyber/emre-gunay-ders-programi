@@ -4,10 +4,18 @@
 //
 // app.js and labs.js read these globals on each tick, so replacing them is
 // enough — no re-render plumbing needed.
+//
+// Refresh strategy:
+//  · localStorage cache for 30s (fast page loads)
+//  · Background fetch on every page load
+//  · Auto-refresh every 2 minutes while page is open
+//  · Refresh when tab becomes visible (user returns)
+//  · Refresh when browser comes back online
 
 (function () {
-  const CACHE_KEY = "bt.schedules.cache.v1";
-  const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+  const CACHE_KEY = "bt.schedules.cache.v2";
+  const CACHE_TTL = 30 * 1000;           // 30 seconds — admin edits propagate quickly
+  const REFRESH_INTERVAL = 2 * 60 * 1000; // 2 minutes background refresh
 
   function readCache() {
     try {
@@ -45,6 +53,8 @@
         .map(l => ({
           gun: l.gun, bas: l.bas, bit: l.bit,
           ad: l.ad, lab: l.lab || "", kademe: l.kademe,
+          substitute: !!l.substitute,
+          originalTeacherId: l.originalTeacherId || null,
         })),
     }));
   }
@@ -66,19 +76,33 @@
 
   async function fetchToday() {
     try {
-      const r = await fetch("/api/schedules/today", { credentials: "same-origin" });
+      const r = await fetch("/api/schedules/today", { credentials: "same-origin", cache: "no-store" });
       if (!r.ok) return null;
       return await r.json();
     } catch { return null; }
   }
 
-  // Apply cached data first (fast), then fire network request to refresh.
-  const cached = readCache();
-  if (cached) applyApiData(cached);
-
-  fetchToday().then(data => {
-    if (!data) return;
+  async function refresh() {
+    const data = await fetchToday();
+    if (!data) return false;
     writeCache(data);
     applyApiData(data);
+    return true;
+  }
+
+  // Initial: apply cached data instantly (if fresh), then refresh in background.
+  const cached = readCache();
+  if (cached) applyApiData(cached);
+  refresh();
+
+  // Periodic background refresh
+  setInterval(refresh, REFRESH_INTERVAL);
+
+  // Refresh when tab becomes visible again
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") refresh();
   });
+
+  // Refresh when browser comes back online
+  window.addEventListener("online", refresh);
 })();

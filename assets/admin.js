@@ -1047,6 +1047,8 @@
       pendingAbsences.delete(teacher.id);
       updateStats();
       renderAbsences();
+      // Bust the public page cache so substitute teachers see the update instantly
+      try { localStorage.removeItem("bt.schedules.cache.v2"); } catch {}
       toast("Yoklama kaydedildi", "ok");
     } catch (err) {
       toast(err.message || "Kaydedilemedi", "err");
@@ -1066,6 +1068,7 @@
       state.absences = state.absences.filter(x => x.id !== ab.id);
       updateStats();
       renderAbsences();
+      try { localStorage.removeItem("bt.schedules.cache.v2"); } catch {}
       toast("Silindi", "ok");
     } catch (err) {
       toast(err.message || "Silinemedi", "err");

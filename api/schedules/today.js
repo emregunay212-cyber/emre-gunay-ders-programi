@@ -11,7 +11,8 @@ export default async function handler(req, res) {
     const { teachers, lessons, absences } = await loadAll();
     const date = (req.query && req.query.date) || todayStr();
     const effective = applyAbsencesForDate(lessons, absences, date);
-    res.setHeader("Cache-Control", "public, s-maxage=30, stale-while-revalidate=120");
+    // Short cache — admin edits should propagate within seconds.
+    res.setHeader("Cache-Control", "public, s-maxage=15, stale-while-revalidate=60");
     res.status(200).json({
       date,
       teachers,
