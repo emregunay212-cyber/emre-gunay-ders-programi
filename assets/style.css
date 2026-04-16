@@ -374,28 +374,33 @@ footer {
   opacity: 0.7;
 }
 
-/* Push toggle button on teacher header */
+/* Push toggle button on teacher header — block below the header, full-width on mobile */
 .push-toggle {
-  position: absolute;
-  right: 0;
-  top: 14px;
+  display: block;
+  width: 100%;
+  max-width: 280px;
+  margin: 16px auto 0;
   background: var(--card);
   border: 1px solid var(--border);
-  color: var(--muted);
-  font-size: 11px;
-  padding: 7px 12px;
-  border-radius: 8px;
-  letter-spacing: 0.04em;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 11px 16px;
+  border-radius: 10px;
+  letter-spacing: 0.02em;
   cursor: pointer;
-  transition: color 160ms, border-color 160ms;
+  transition: color 160ms, border-color 160ms, background 160ms;
   font-family: inherit;
+  text-align: center;
 }
-.push-toggle:hover:not(:disabled) { color: var(--text); border-color: #4ade80; }
-.push-toggle.on { color: #4ade80; border-color: rgba(74, 222, 128, 0.4); }
-.push-toggle.disabled, .push-toggle:disabled { opacity: 0.55; cursor: not-allowed; }
-@media (max-width: 480px) {
-  .push-toggle { position: static; display: inline-block; margin-top: 8px; font-size: 10px; }
+.push-toggle:hover:not(:disabled) { border-color: #4ade80; }
+.push-toggle.on {
+  color: #042416;
+  background: #4ade80;
+  border-color: #4ade80;
+  font-weight: 700;
 }
+.push-toggle.disabled, .push-toggle:disabled { opacity: 0.6; cursor: not-allowed; }
 
 /* Pending approval card */
 .pending-card {
