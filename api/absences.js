@@ -81,9 +81,14 @@ async function notifySubstitute({ absence, override, absentTeacher, substitute, 
     token: override.approvalToken, // SW calls /api/approve directly on action click
     requireInteraction: true,
     tag: "approval-" + override.lessonId + "-" + absence.date,
+    // Order matters: some Android/Chrome builds render action buttons
+    // in reverse visual order relative to the array, which has caused
+    // users to reliably tap "Onayla" and receive event.action="reject".
+    // Putting reject first trades nothing (user reads the title, not
+    // the position) and heals devices with that mapping quirk.
     actions: [
-      { action: "approve", title: "✓ ONAYLA" },
       { action: "reject",  title: "✗ REDDET" },
+      { action: "approve", title: "✓ ONAYLA" },
     ],
   };
   const pushResult = await sendPushToTeacher(substitute, pushPayload).catch(() => ({ sent: 0, failed: 0, gone: [] }));
