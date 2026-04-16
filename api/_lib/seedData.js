@@ -2,10 +2,10 @@
 // Keep in sync if you edit assets/data-*.js manually.
 
 export const SEED_TEACHERS = [
-  { id: "t_emre",  name: "Emre Günay",         slug: "emre",  meta: "Anaokulu · İlkokul · Ortaokul" },
-  { id: "t_halil", name: "Halil İbrahim Eriş", slug: "halil", meta: "Ortaokul · Lise" },
-  { id: "t_imge",  name: "İmge Özgencil",      slug: "imge",  meta: "İlkokul" },
-  { id: "t_yunus", name: "M. Yunus Toprak",    slug: "yunus", meta: "İlkokul · Ortaokul · Lise" },
+  { id: "t_emre",  name: "Emre Günay",         slug: "emre",  meta: "Anaokulu · İlkokul · Ortaokul", email: "", pushSubscriptions: [] },
+  { id: "t_halil", name: "Halil İbrahim Eriş", slug: "halil", meta: "Ortaokul · Lise", email: "", pushSubscriptions: [] },
+  { id: "t_imge",  name: "İmge Özgencil",      slug: "imge",  meta: "İlkokul", email: "", pushSubscriptions: [] },
+  { id: "t_yunus", name: "M. Yunus Toprak",    slug: "yunus", meta: "İlkokul · Ortaokul · Lise", email: "", pushSubscriptions: [] },
 ];
 
 export const SEED_LESSONS = [

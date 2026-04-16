@@ -22,6 +22,8 @@ export default async function handler(req, res) {
         name: out.name,
         slug: out.slug,
         meta: out.meta || "",
+        email: out.email || "",
+        pushSubscriptions: [],
       };
       const next = [...teachers, teacher];
       await saveTeachers(next);

@@ -95,5 +95,14 @@ export function validateTeacher(input, existing = []) {
 
   if (typeof input.meta === "string") out.meta = input.meta.trim();
 
+  if (input.email != null) {
+    const email = String(input.email).trim();
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      errs.push("Geçersiz e-posta adresi");
+    } else {
+      out.email = email;
+    }
+  }
+
   return { errs, out };
 }

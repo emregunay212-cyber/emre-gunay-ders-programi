@@ -383,6 +383,21 @@
       metaField.appendChild(metaInput);
       form.appendChild(metaField);
 
+      const emailField = el("div", { className: "field" });
+      emailField.appendChild(el("label", { text: "E-posta (bildirim için)", attrs: { for: "f-email" } }));
+      const emailInput = el("input", { attrs: { id: "f-email", type: "email", placeholder: "ornek@balikesir.bilnet.k12.tr", autocomplete: "off" } });
+      if (teacher && teacher.email) emailInput.value = teacher.email;
+      emailField.appendChild(emailInput);
+      emailField.appendChild(el("div", { className: "field-hint", text: "Ders devri bildirimleri bu adrese gider" }));
+      form.appendChild(emailField);
+
+      if (isEdit) {
+        const subCount = (teacher.pushSubscriptions || []).length;
+        const infoField = el("div", { className: "field-hint", style: "margin-top:-8px; margin-bottom:14px;" });
+        infoField.textContent = "📱 Bildirim cihazı: " + subCount + " adet (telefondan sayfasına girip bildirim aç)";
+        form.appendChild(infoField);
+      }
+
       const errAlert = el("div", { className: "alert alert-err", style: "display:none" });
       errAlert.appendChild(icon("alert", 16));
       const errText = el("span");
@@ -410,6 +425,7 @@
           name: nameInput.value.trim(),
           slug: slugInput.value.trim(),
           meta: metaInput.value.trim(),
+          email: emailInput.value.trim(),
         };
         try {
           if (isEdit) {
@@ -819,6 +835,20 @@
   });
 
   // ========== ABSENCES ==========
+  function buildStatusBadge(ov) {
+    if (!ov || ov.action !== "transfer") return null;
+    const status = ov.status || "pending";
+    const STATUSES = {
+      pending:  { label: "BEKLİYOR",  cls: "pending" },
+      approved: { label: "ONAYLANDI", cls: "approved" },
+      rejected: { label: "REDDEDİLDİ", cls: "rejected" },
+      auto:     { label: "—",          cls: "auto" },
+    };
+    const s = STATUSES[status] || STATUSES.pending;
+    const b = el("span", { className: "status-badge s-" + s.cls, text: s.label });
+    return b;
+  }
+
   const pendingAbsences = new Map();
 
   function isoWeekdayProgGun(isoDate) {
@@ -906,13 +936,28 @@
         card.appendChild(head);
 
         const list = el("div", { className: "active-absence-list" });
+        let pendingOverdue = 0;
         for (const ov of (ab.lessonOverrides || [])) {
           const l = lById[ov.lessonId];
           const prefix = l ? `${l.bas}–${l.bit} ${l.ad}` : ov.lessonId;
-          const line = el("div", { className: "line " + (ov.action === "cancel" ? "cancel" : "transfer") });
-          if (ov.action === "cancel") line.textContent = "• " + prefix + " → İPTAL";
-          else line.textContent = "• " + prefix + " → " + (tById[ov.substituteTeacherId] || "?");
-          list.appendChild(line);
+          const line = el("div", { className: "line " + (ov.action === "cancel" ? "cancel" : (ov.status || "pending")) });
+          if (ov.action === "cancel") {
+            line.textContent = "• " + prefix + " → İPTAL";
+            list.appendChild(line);
+          } else {
+            line.appendChild(document.createTextNode("• " + prefix + " → " + (tById[ov.substituteTeacherId] || "?") + " "));
+            const badge = buildStatusBadge(ov);
+            if (badge) line.appendChild(badge);
+            list.appendChild(line);
+            if (ov.status === "pending" && ov.notifiedAt) {
+              const elapsed = Date.now() - new Date(ov.notifiedAt).getTime();
+              if (elapsed > 30 * 60 * 1000) pendingOverdue++;
+            }
+          }
+        }
+        if (pendingOverdue > 0) {
+          const warn = el("div", { style: "margin-top:8px; padding:6px 10px; background: rgba(251,146,60,0.12); border: 1px solid rgba(251,146,60,0.35); border-radius:6px; color:#fed7aa; font-family: var(--font-mono); font-size:11px; letter-spacing: 0.06em;", text: "⚠ " + pendingOverdue + " onay 30 dk'yı geçti — admin'e bildirim gitti" });
+          list.appendChild(warn);
         }
         if (ab.note) list.appendChild(el("div", { style: "margin-top:6px; font-style:italic;", text: "Not: " + ab.note }));
         card.appendChild(list);

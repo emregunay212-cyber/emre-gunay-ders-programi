@@ -1,16 +1,20 @@
-// Absence override model.
+// Absence override model — status-aware.
 //
-// We NEVER delete the original lesson from its owner's schedule. When an
-// absence transfer happens, we:
-//  1) Mark the original lesson with `transferredOn: [{ date, to }]` so the
-//     original teacher's weekly view shows it as "pasif · devredildi" on that
-//     specific date, and returns to normal automatically afterward.
-//  2) Add a fresh substitute-copy lesson with `onlyOn: date`, `substitute: true`,
-//     retargeted to the substitute teacher, which appears only on that date.
+// lessonOverride.status:
+//   "pending"  — transfer waiting for substitute's approval
+//   "approved" — substitute accepted → applied to schedules
+//   "rejected" — substitute declined → neither side shows the change
+//   "auto"     — cancellations (always applied without approval)
 //
-// For cancellations: `cancelledOn: [date, ...]` on the original only (no copy added).
+// Original lesson is NEVER deleted; transfer only adds:
+//   - transferredOn: [{date, to}] marker (for passive UI on original's page)
+//   - a fresh onlyOn: date copy retargeted to substitute (rendered as "↪ Yerine")
 //
-// All original metadata is untouched — absence tracking is additive only.
+// For PENDING transfers:
+//   - original stays normal (not passive) because nothing's confirmed yet
+//   - substitute does NOT see it in their regular schedule (only the pending
+//     approval card renders it separately)
+// For REJECTED: same as pending from a schedule perspective — admin must reassign.
 
 export function applyAbsencesForDate(lessons, absences, dateStr) {
   if (!Array.isArray(absences) || !absences.length) return lessons.map(l => ({ ...l }));
@@ -22,6 +26,7 @@ export function applyAbsencesForDate(lessons, absences, dateStr) {
     for (const ov of (ab.lessonOverrides || [])) {
       overrides.set(ov.lessonId, {
         action: ov.action,
+        status: ov.status || (ov.action === "cancel" ? "auto" : "pending"),
         substituteTeacherId: ov.substituteTeacherId,
         absentTeacherId: ab.teacherId,
         absenceId: ab.id,
@@ -34,7 +39,7 @@ export function applyAbsencesForDate(lessons, absences, dateStr) {
     const ov = overrides.get(l.id);
     if (!ov) { out.push({ ...l }); continue; }
     if (ov.action === "cancel") continue;
-    if (ov.action === "transfer" && ov.substituteTeacherId) {
+    if (ov.action === "transfer" && ov.status === "approved" && ov.substituteTeacherId) {
       out.push({
         ...l,
         teacherId: ov.substituteTeacherId,
@@ -43,15 +48,13 @@ export function applyAbsencesForDate(lessons, absences, dateStr) {
         absenceId: ov.absenceId,
       });
     } else {
+      // pending/rejected → keep original unchanged (no transfer applied)
       out.push({ ...l });
     }
   }
   return out;
 }
 
-// Apply all TODAY-or-FUTURE absences to the weekly program.
-// Originals stay in the list (with passive markers); substitutes are added as
-// new entries tied to a specific date.
 export function applyCurrentAndFutureAbsences(lessons, absences, todayStrVal) {
   const base = lessons.map(l => ({ ...l }));
   const added = [];
@@ -62,28 +65,33 @@ export function applyCurrentAndFutureAbsences(lessons, absences, todayStrVal) {
 
   for (const ab of relevant) {
     for (const ov of (ab.lessonOverrides || [])) {
+      const status = ov.status || (ov.action === "cancel" ? "auto" : "pending");
       const l = byId.get(ov.lessonId);
       if (!l) continue;
 
       if (ov.action === "cancel") {
         if (!Array.isArray(l.cancelledOn)) l.cancelledOn = [];
         l.cancelledOn.push(ab.date);
-      } else if (ov.action === "transfer" && ov.substituteTeacherId) {
-        if (!Array.isArray(l.transferredOn)) l.transferredOn = [];
-        l.transferredOn.push({ date: ab.date, to: ov.substituteTeacherId });
-
-        added.push({
-          ...l,
-          id: l.id + "@" + ab.date,
-          teacherId: ov.substituteTeacherId,
-          substitute: true,
-          originalTeacherId: ab.teacherId,
-          absenceId: ab.id,
-          onlyOn: ab.date,
-          cancelledOn: undefined,
-          transferredOn: undefined,
-        });
+        continue;
       }
+
+      // Transfer: only apply markers/copies if APPROVED.
+      if (status !== "approved" || !ov.substituteTeacherId) continue;
+
+      if (!Array.isArray(l.transferredOn)) l.transferredOn = [];
+      l.transferredOn.push({ date: ab.date, to: ov.substituteTeacherId });
+
+      added.push({
+        ...l,
+        id: l.id + "@" + ab.date,
+        teacherId: ov.substituteTeacherId,
+        substitute: true,
+        originalTeacherId: ab.teacherId,
+        absenceId: ab.id,
+        onlyOn: ab.date,
+        cancelledOn: undefined,
+        transferredOn: undefined,
+      });
     }
   }
   return base.concat(added);

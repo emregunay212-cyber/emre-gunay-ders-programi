@@ -18,7 +18,13 @@ export default async function handler(req, res) {
       const merged = { ...teachers[idx], ...body, id };
       const { errs, out } = validateTeacher(merged, teachers);
       if (errs.length) return badRequest(res, errs.join(" · "));
-      teachers[idx] = { ...teachers[idx], name: out.name, slug: out.slug, meta: out.meta ?? teachers[idx].meta };
+      teachers[idx] = {
+        ...teachers[idx],
+        name: out.name,
+        slug: out.slug,
+        meta: out.meta ?? teachers[idx].meta,
+        email: out.email != null ? out.email : (teachers[idx].email || ""),
+      };
       await saveTeachers(teachers);
       return res.status(200).json({ teacher: teachers[idx] });
     }
