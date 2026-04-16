@@ -70,6 +70,14 @@
       if (permission !== "granted") return { ok: false, error: "denied" };
       const vapid = await getVapidKey();
       if (!vapid) return { ok: false, error: "no-vapid" };
+      // Clear any stale subscription first. Browsers throw
+      // "Registration failed - push service error" when an existing
+      // subscription was created with a different applicationServerKey
+      // (e.g. after VAPID key rotation or a previous deploy).
+      try {
+        const existing = await reg.pushManager.getSubscription();
+        if (existing) await existing.unsubscribe();
+      } catch {}
       browserSub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(vapid),
