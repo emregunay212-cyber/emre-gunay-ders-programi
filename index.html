@@ -71,95 +71,75 @@
     padding: 28px clamp(16px, 4vw, 32px) 60px;
   }
 
-  /* ---------- Top ---------- */
-  .top-bar {
+  /* ---------- Masthead (minimal) ---------- */
+  .masthead {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 22px;
+    gap: 14px;
+    padding: 4px 0 28px;
+    margin-bottom: 28px;
+    border-bottom: 1px solid var(--line-soft);
+    flex-wrap: wrap;
+    animation: fade-in 600ms ease;
+  }
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  .masthead-left {
+    display: flex;
+    align-items: baseline;
     gap: 14px;
     flex-wrap: wrap;
+    min-width: 0;
   }
-  .brand {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
+  .masthead-mark {
     font-family: var(--font-mono);
     font-size: 10px;
-    letter-spacing: 0.28em;
+    font-weight: 700;
+    letter-spacing: 0.24em;
     text-transform: uppercase;
+    color: var(--accent);
+    white-space: nowrap;
+  }
+  .masthead-title {
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-style: italic;
+    font-size: clamp(18px, 2.4vw, 22px);
+    letter-spacing: -0.01em;
+    line-height: 1;
+    color: var(--text);
+    margin: 0;
+  }
+  .masthead-title em {
+    font-style: normal;
+    font-family: var(--font-body);
+    font-weight: 600;
     color: var(--muted);
+    margin-left: 8px;
   }
-  .brand::before {
-    content: "";
-    width: 7px; height: 7px;
-    border-radius: 50%;
-    background: var(--accent);
-    box-shadow: 0 0 8px var(--accent);
-    animation: breathe 2.4s ease-in-out infinite;
-  }
-  @keyframes breathe { 0%,100%{opacity:0.5} 50%{opacity:1} }
-
   .clock-box {
     text-align: right;
     line-height: 1.1;
+    flex-shrink: 0;
   }
   .clock-val {
     font-family: var(--font-mono);
-    font-size: clamp(16px, 2.5vw, 20px);
-    font-weight: 600;
+    font-size: clamp(14px, 2vw, 16px);
+    font-weight: 500;
     letter-spacing: -0.01em;
     font-variant-numeric: tabular-nums;
     color: var(--text);
   }
   .clock-date {
     font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: 9px;
     color: var(--muted);
-    letter-spacing: 0.18em;
+    letter-spacing: 0.16em;
     text-transform: uppercase;
     margin-top: 3px;
-  }
-
-  /* ---------- Hero ---------- */
-  .hero {
-    padding: 14px 0 28px;
-    margin-bottom: 24px;
-    border-bottom: 1px solid var(--line-soft);
-    animation: rise 600ms cubic-bezier(0.22, 1, 0.36, 1);
-  }
-  @keyframes rise {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-  .hero-eyebrow {
-    font-family: var(--font-mono);
-    font-size: 10px;
-    letter-spacing: 0.3em;
-    text-transform: uppercase;
-    color: var(--accent);
-    font-weight: 700;
-    margin-bottom: 12px;
-  }
-  .hero-title {
-    font-family: var(--font-display);
-    font-weight: 400;
-    font-size: clamp(42px, 8vw, 80px);
-    line-height: 0.95;
-    letter-spacing: -0.035em;
-    margin: 0 0 10px;
-    color: var(--text);
-  }
-  .hero-title em {
-    font-style: italic;
-    color: var(--accent);
-  }
-  .hero-sub {
-    color: var(--muted);
-    font-size: clamp(14px, 1.6vw, 16px);
-    max-width: 540px;
-    line-height: 1.55;
-    margin: 0;
   }
 
   /* ---------- Live lab strip ---------- */
@@ -508,20 +488,16 @@
 
 <div class="page">
 
-  <div class="top-bar">
-    <span class="brand">Bilnet Balıkesir · BT</span>
+  <header class="masthead">
+    <div class="masthead-left">
+      <span class="masthead-mark">Bilnet Balıkesir</span>
+      <h1 class="masthead-title">Bilişim Teknolojileri <em>· ders programı</em></h1>
+    </div>
     <div class="clock-box">
       <div class="clock-val" id="clock">--:--:--</div>
       <div class="clock-date" id="date">—</div>
     </div>
-  </div>
-
-  <!-- Hero -->
-  <section class="hero">
-    <div class="hero-eyebrow">Bilişim Teknolojileri</div>
-    <h1 class="hero-title">Ders programı <em>ve</em><br/>laboratuvar panosu</h1>
-    <p class="hero-sub">Öğretmen ve lab programlarını canlı takip et, gelmeyen hocaların derslerini başka öğretmenlere devret, boş saatlerini gör.</p>
-  </section>
+  </header>
 
   <!-- Live lab strip -->
   <section class="labs-strip" id="labs-strip">
