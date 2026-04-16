@@ -158,20 +158,25 @@
     }
   }
 
-  // Resync an existing browser subscription with the server. Idempotent —
-  // /api/push?action=subscribe replaces on duplicate endpoint. This heals
-  // cases where the server lost/never saw a subscription but the browser
-  // still has one (push works only if both sides agree).
-  async function resyncSubscription(sub) {
+  // Check with the server whether THIS browser's subscription endpoint is
+  // registered for THIS teacher's slug. Returns true only when the current
+  // page's teacher actually owns this endpoint on the server — prevents
+  // the button from showing "Bildirim açık" on a page the user never
+  // subscribed for (e.g. admin visiting halil.html after subscribing as
+  // emre would otherwise wrongly display "açık" here).
+  async function isRegisteredForCurrentTeacher(sub) {
     const slug = teacherSlug();
-    if (!slug || !sub) return;
+    if (!slug || !sub) return false;
     try {
-      await fetch("/api/push?action=subscribe", {
+      const r = await fetch("/api/push?action=check", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ teacherSlug: slug, subscription: sub.toJSON() }),
+        body: JSON.stringify({ teacherSlug: slug, endpoint: sub.endpoint }),
       });
-    } catch {}
+      if (!r.ok) return false;
+      const j = await r.json();
+      return !!j.subscribed;
+    } catch { return false; }
   }
 
   async function renderSubscribeButton() {
@@ -194,9 +199,6 @@
 
     const permission = Notification.permission;
     const sub = await currentSubscription().catch(() => null);
-    // If the browser already has a sub, quietly re-upsert it to the server
-    // so previously-disconnected teachers start receiving push again.
-    if (sub) resyncSubscription(sub);
 
     if (permission === "denied") {
       btn.textContent = "🔕 Tarayıcı izin vermedi";
@@ -207,7 +209,13 @@
 
     btn.disabled = false;
     btn.classList.remove("disabled");
-    if (sub) {
+
+    // A browser subscription alone isn't enough — it must also be
+    // registered for THIS teacher on the server. Otherwise we'd show
+    // "açık" on a page the user never subscribed for.
+    const registeredHere = sub ? await isRegisteredForCurrentTeacher(sub) : false;
+
+    if (sub && registeredHere) {
       btn.textContent = "🔔 Bildirim açık";
       btn.classList.add("on");
       btn.onclick = async () => {

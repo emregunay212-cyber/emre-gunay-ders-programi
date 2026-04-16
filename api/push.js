@@ -2,8 +2,11 @@
 //   GET  /api/push?action=vapid-key        → public VAPID key
 //   POST /api/push?action=subscribe        → add subscription to a teacher
 //   POST /api/push?action=unsubscribe      → remove a subscription
+//   POST /api/push?action=check            → is this endpoint registered for this teacher?
+//   POST /api/push?action=reset-all        → admin: clear all subscriptions (cleanup)
 import { loadAll, saveTeachers } from "./_lib/seed.js";
 import { getVapidPublicKey } from "./_lib/notify.js";
+import { requireAdmin } from "./_lib/auth.js";
 import { readJsonBody, methodNotAllowed, badRequest, serverError } from "./_lib/util.js";
 
 export default async function handler(req, res) {
@@ -45,6 +48,36 @@ export default async function handler(req, res) {
       else teachers[idx].pushSubscriptions.push(clean);
       await saveTeachers(teachers);
       return res.status(200).json({ ok: true, count: teachers[idx].pushSubscriptions.length });
+    }
+    if (req.method === "POST" && action === "check") {
+      // Reports whether THIS endpoint is registered for THIS teacher's
+      // slug on the server. Used by the UI to render "Bildirim açık"
+      // only when both browser and server agree; otherwise the button
+      // shows "Bildirim aç" (no silent resync that could steal the
+      // endpoint from another teacher).
+      const body = await readJsonBody(req);
+      const slug = typeof body.teacherSlug === "string" ? body.teacherSlug : "";
+      const endpoint = typeof body.endpoint === "string" ? body.endpoint : "";
+      if (!slug || !endpoint) return badRequest(res, "teacherSlug ve endpoint gerekli");
+      const { teachers } = await loadAll();
+      const t = teachers.find(x => x.slug === slug);
+      if (!t) return res.status(404).json({ error: "Öğretmen bulunamadı" });
+      const subscribed = Array.isArray(t.pushSubscriptions)
+        && t.pushSubscriptions.some(s => s.endpoint === endpoint);
+      return res.status(200).json({ subscribed });
+    }
+    if (req.method === "POST" && action === "reset-all") {
+      if (!(await requireAdmin(req, res))) return;
+      const { teachers } = await loadAll();
+      let cleared = 0;
+      for (const t of teachers) {
+        if (Array.isArray(t.pushSubscriptions) && t.pushSubscriptions.length > 0) {
+          cleared += t.pushSubscriptions.length;
+          t.pushSubscriptions = [];
+        }
+      }
+      await saveTeachers(teachers);
+      return res.status(200).json({ ok: true, cleared });
     }
     if (req.method === "POST" && action === "unsubscribe") {
       const body = await readJsonBody(req);

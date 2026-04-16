@@ -257,6 +257,25 @@
     location.replace("admin-login.html");
   });
 
+  const resetPushBtn = document.getElementById("btn-reset-push");
+  if (resetPushBtn) {
+    resetPushBtn.addEventListener("click", async () => {
+      const ok = await confirmDialog({
+        title: "Bildirimleri sıfırla",
+        body: "Tüm öğretmenlerin push abonelikleri silinecek. Herkes kendi sayfasından yeniden 'Bildirim aç' demeli. Devam edilsin mi?",
+        confirmText: "Sıfırla",
+        cancelText: "Vazgeç",
+      });
+      if (!ok) return;
+      try {
+        const r = await api("POST", "/api/push?action=reset-all");
+        toast((r.cleared || 0) + " abonelik silindi. Herkes tekrar abone olsun.", "ok");
+      } catch (err) {
+        toast(err.message || "Sıfırlanamadı", "err");
+      }
+    });
+  }
+
   // Stats strip + tab counts
   function updateStats() {
     document.getElementById("cnt-t").textContent = state.teachers.length;
