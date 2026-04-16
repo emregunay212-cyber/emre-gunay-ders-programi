@@ -2,68 +2,632 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <meta name="theme-color" content="#0a0b10" />
 <title>Admin Giriş · BT Ders Programı</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link rel="stylesheet" href="assets/admin.css" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700;800&display=swap" />
+<style>
+  :root {
+    --bg: #0a0b10;
+    --surface: #14161f;
+    --surface-2: #1b1e29;
+    --surface-3: #232632;
+    --line: #262a38;
+    --line-soft: #1e2230;
+    --text: #f0f2f7;
+    --muted: #8389a0;
+    --faint: #4f5567;
+
+    --accent: #fbbf24;
+    --accent-hover: #fcd34d;
+    --accent-soft: rgba(251, 191, 36, 0.12);
+    --accent-dim: rgba(251, 191, 36, 0.42);
+    --accent-ink: #1a1205;
+
+    --err: #f87171;
+    --warn: #fb923c;
+
+    --font-body: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
+    --font-mono: 'IBM Plex Mono', ui-monospace, 'Menlo', monospace;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); }
+  body {
+    font-family: var(--font-body);
+    min-height: 100dvh;
+    -webkit-font-smoothing: antialiased;
+    display: grid;
+    place-items: center;
+    padding: 20px;
+    overflow: hidden;
+    position: relative;
+    background-image:
+      radial-gradient(900px 500px at 50% -10%, var(--accent-soft), transparent 60%),
+      radial-gradient(700px 400px at 10% 110%, rgba(251, 191, 36, 0.06), transparent 70%),
+      radial-gradient(700px 400px at 100% 100%, rgba(96, 165, 250, 0.04), transparent 70%);
+  }
+
+  /* Decorative grid background */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--line-soft) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line-soft) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: radial-gradient(circle at 50% 50%, black 30%, transparent 75%);
+    -webkit-mask-image: radial-gradient(circle at 50% 50%, black 30%, transparent 75%);
+    opacity: 0.4;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  a { color: inherit; text-decoration: none; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+
+  /* ---------- Layout ---------- */
+  .stage {
+    width: 100%;
+    max-width: 420px;
+    position: relative;
+    z-index: 1;
+    animation: rise 600ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  }
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Brand strip (above card) */
+  .brand-strip {
+    text-align: center;
+    margin-bottom: 24px;
+    animation: fade-in 700ms 100ms backwards;
+  }
+  @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+  .brand-strip .mark {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 10px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    background: var(--surface);
+  }
+  .brand-strip .mark .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent);
+    animation: breathe 2.4s ease-in-out infinite;
+  }
+  @keyframes breathe {
+    0%, 100% { opacity: 0.6; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.2); }
+  }
+
+  /* ---------- Card ---------- */
+  .card {
+    background: linear-gradient(180deg, var(--surface), var(--surface-2));
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    padding: 32px 28px 26px;
+    position: relative;
+    overflow: hidden;
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.04) inset,
+      0 30px 60px -30px rgba(0, 0, 0, 0.6);
+    animation: card-in 700ms 150ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  }
+  @keyframes card-in {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .card.shake { animation: shake 450ms cubic-bezier(0.36, 0.07, 0.19, 0.97); }
+  @keyframes shake {
+    10%, 90% { transform: translateX(-2px); }
+    20%, 80% { transform: translateX(3px); }
+    30%, 50%, 70% { transform: translateX(-5px); }
+    40%, 60% { transform: translateX(5px); }
+  }
+
+  /* Lock icon */
+  .lock {
+    width: 56px; height: 56px;
+    margin: 0 auto 18px;
+    display: grid;
+    place-items: center;
+    background: radial-gradient(circle at 30% 20%, color-mix(in srgb, var(--accent) 28%, transparent), var(--surface-3));
+    border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+    border-radius: 16px;
+    color: var(--accent);
+    position: relative;
+    transition: transform 260ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .lock svg { width: 28px; height: 28px; display: block; }
+  .lock .shackle { transform-origin: 50% 50%; transition: transform 400ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+  .card.success .lock { transform: scale(1.1); }
+  .card.success .lock .shackle { transform: translateY(-3px) rotate(-18deg); }
+  .card.success .lock { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+
+  /* Heading */
+  .eyebrow {
+    text-align: center;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .title {
+    text-align: center;
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: -0.025em;
+    margin: 0 0 6px;
+  }
+  .subtitle {
+    text-align: center;
+    color: var(--muted);
+    font-size: 13px;
+    margin-bottom: 22px;
+    line-height: 1.5;
+  }
+
+  /* Alert (error) */
+  .alert {
+    display: none;
+    padding: 10px 14px;
+    border-radius: 10px;
+    margin-bottom: 14px;
+    font-size: 13px;
+    line-height: 1.4;
+    border: 1px solid rgba(248, 113, 113, 0.3);
+    background: rgba(248, 113, 113, 0.1);
+    color: #fecaca;
+    align-items: center;
+    gap: 10px;
+  }
+  .alert.show { display: flex; animation: alert-in 200ms ease; }
+  @keyframes alert-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+  .alert svg { width: 16px; height: 16px; flex-shrink: 0; }
+
+  /* Caps Lock hint */
+  .capslock-hint {
+    display: none;
+    margin-top: 6px;
+    color: var(--warn);
+    font-size: 11px;
+    font-family: var(--font-mono);
+    letter-spacing: 0.06em;
+    align-items: center;
+    gap: 6px;
+  }
+  .capslock-hint.show { display: flex; }
+  .capslock-hint .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--warn);
+    animation: breathe 1.8s ease-in-out infinite;
+  }
+
+  /* Field */
+  .field { margin-bottom: 8px; }
+  .field-label {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+  .input-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+  .input-wrap input {
+    width: 100%;
+    padding: 14px 48px 14px 16px;
+    background: var(--surface-3);
+    border: 1px solid var(--line);
+    border-radius: 11px;
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 16px; /* 16px → iOS'ta otomatik zoom'u engeller */
+    letter-spacing: 0.02em;
+    transition: border-color 160ms, box-shadow 160ms, background 160ms;
+    min-height: 52px;
+  }
+  .input-wrap input:focus {
+    outline: 0;
+    border-color: var(--accent);
+    background: var(--surface-2);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+  .input-wrap input::placeholder { color: var(--faint); letter-spacing: 0.1em; }
+  .input-wrap input:disabled { opacity: 0.5; cursor: wait; }
+  .input-wrap.error input { border-color: var(--err); box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.12); }
+
+  .toggle-eye {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: transparent;
+    border: 0;
+    border-radius: 7px;
+    padding: 8px;
+    color: var(--muted);
+    display: grid;
+    place-items: center;
+    transition: color 140ms, background 140ms;
+  }
+  .toggle-eye:hover { color: var(--text); background: var(--line-soft); }
+  .toggle-eye:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+    color: var(--text);
+  }
+  .toggle-eye svg { width: 18px; height: 18px; }
+
+  /* Button */
+  .actions {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 8px;
+    margin-top: 22px;
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 14px 18px;
+    border-radius: 11px;
+    border: 1px solid transparent;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.005em;
+    min-height: 50px;
+    transition: transform 120ms, background 180ms, box-shadow 180ms, border-color 180ms;
+    text-decoration: none;
+  }
+  .btn:active { transform: scale(0.98); }
+  .btn-secondary {
+    background: var(--surface-3);
+    color: var(--muted);
+    border-color: var(--line);
+  }
+  .btn-secondary:hover { color: var(--text); border-color: var(--accent-dim); }
+  .btn-primary {
+    background: var(--accent);
+    color: var(--accent-ink);
+    box-shadow: 0 8px 24px -10px color-mix(in srgb, var(--accent) 70%, transparent);
+  }
+  .btn-primary:hover { background: var(--accent-hover); box-shadow: 0 10px 28px -8px color-mix(in srgb, var(--accent) 75%, transparent); }
+  .btn-primary:disabled { opacity: 0.65; cursor: not-allowed; transform: none; }
+
+  .spinner {
+    width: 16px; height: 16px;
+    border: 2px solid rgba(26, 18, 5, 0.25);
+    border-top-color: var(--accent-ink);
+    border-radius: 50%;
+    animation: spin 600ms linear infinite;
+    display: none;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .btn-primary.loading .spinner { display: block; }
+  .btn-primary.loading .kbd { display: none; }
+
+  .kbd {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    padding: 2px 6px;
+    background: rgba(26, 18, 5, 0.15);
+    border: 1px solid rgba(26, 18, 5, 0.2);
+    border-radius: 4px;
+    margin-left: 2px;
+    letter-spacing: 0.04em;
+  }
+
+  /* Helper row */
+  .helper {
+    margin-top: 22px;
+    padding-top: 16px;
+    border-top: 1px dashed var(--line);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+  .helper svg {
+    width: 18px; height: 18px;
+    flex-shrink: 0;
+    color: var(--accent);
+    opacity: 0.85;
+  }
+
+  /* Bottom links */
+  .bottom-links {
+    margin-top: 18px;
+    text-align: center;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--faint);
+    animation: fade-in 600ms 400ms backwards;
+  }
+  .bottom-links a {
+    color: var(--muted);
+    padding: 4px 0;
+    border-bottom: 1px solid transparent;
+    transition: color 140ms, border-color 140ms;
+  }
+  .bottom-links a:hover { color: var(--text); border-color: var(--accent-dim); }
+
+  /* Loading veil inside card, shown during success redirect */
+  .veil {
+    position: absolute;
+    inset: 0;
+    background: color-mix(in srgb, var(--surface) 80%, transparent);
+    backdrop-filter: blur(4px);
+    display: none;
+    place-items: center;
+    z-index: 3;
+    color: var(--accent);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    gap: 8px;
+  }
+  .card.success .veil { display: grid; }
+  .veil .check {
+    width: 42px; height: 42px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: var(--accent-ink);
+    display: grid; place-items: center;
+    margin-bottom: 8px;
+    animation: pop 400ms cubic-bezier(0.2, 0.8, 0.2, 1) 100ms backwards;
+  }
+  @keyframes pop {
+    from { transform: scale(0); }
+    to { transform: scale(1); }
+  }
+
+  /* Mobile tweaks */
+  @media (max-width: 380px) {
+    .card { padding: 26px 20px 22px; border-radius: 18px; }
+    .title { font-size: 22px; }
+    .input-wrap input { padding: 12px 46px 12px 14px; min-height: 48px; }
+    .actions { grid-template-columns: 1fr; }
+    .actions .btn-secondary { order: 2; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  }
+</style>
 </head>
-<body class="login-page">
-<div class="login-box">
-  <div class="login-eyebrow">Admin Paneli</div>
-  <h1 class="login-title">Giriş yap</h1>
+<body>
 
-  <div id="err" class="alert alert-err" style="display:none"></div>
+<div class="stage">
 
-  <form id="login-form" autocomplete="off">
-    <div class="field">
-      <label for="password">Şifre</label>
-      <input type="password" id="password" name="password" required autofocus />
+  <div class="brand-strip">
+    <span class="mark">
+      <span class="dot"></span>
+      <span>Bilnet Balıkesir · BT</span>
+    </span>
+  </div>
+
+  <div class="card" id="card">
+
+    <div class="lock" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path class="shackle" d="M7 11V7a5 5 0 0 1 10 0v4"/>
+        <rect x="4" y="11" width="16" height="10" rx="2" fill="currentColor" fill-opacity="0.1"/>
+        <circle cx="12" cy="16" r="1.2" fill="currentColor"/>
+      </svg>
     </div>
-    <div class="form-actions">
-      <a href="index.html" class="btn btn-secondary">İptal</a>
-      <button type="submit" class="btn btn-primary" id="submit-btn">Giriş yap</button>
+
+    <div class="eyebrow">Admin Paneli</div>
+    <h1 class="title">Hoş geldin</h1>
+    <p class="subtitle">Şifreni girip ders programını yönetmeye başla.</p>
+
+    <div id="err" class="alert" role="alert" aria-live="polite">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="12" y1="8" x2="12" y2="12"/>
+        <line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      <span id="err-text">Şifre hatalı</span>
     </div>
-  </form>
+
+    <form id="login-form" autocomplete="off" novalidate>
+      <div class="field">
+        <label class="field-label" for="password">Şifre</label>
+        <div class="input-wrap" id="input-wrap">
+          <input
+            type="password"
+            id="password"
+            name="password"
+            placeholder="••••••••"
+            required
+            autofocus
+            autocapitalize="off"
+            autocorrect="off"
+            spellcheck="false"
+            inputmode="text"
+          />
+          <button type="button" class="toggle-eye" id="toggle-eye" aria-label="Şifreyi göster">
+            <svg id="eye-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+            <svg id="eye-closed" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none">
+              <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+              <line x1="1" y1="1" x2="23" y2="23"/>
+            </svg>
+          </button>
+        </div>
+        <div class="capslock-hint" id="caps">
+          <span class="dot"></span>
+          <span>CAPS LOCK açık</span>
+        </div>
+      </div>
+
+      <div class="actions">
+        <a href="index.html" class="btn btn-secondary">İptal</a>
+        <button type="submit" class="btn btn-primary" id="submit-btn">
+          <span class="spinner" aria-hidden="true"></span>
+          <span class="label">Giriş yap</span>
+          <span class="kbd">Enter</span>
+        </button>
+      </div>
+    </form>
+
+    <div class="helper">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="12" y1="16" x2="12" y2="12"/>
+        <line x1="12" y1="8" x2="12.01" y2="8"/>
+      </svg>
+      <span>Sadece yetkili öğretmenler içindir. Şifreni hatırlamıyorsan Emre Günay ile iletişime geç.</span>
+    </div>
+
+    <div class="veil" aria-hidden="true">
+      <div class="check">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="20 6 9 17 4 12"/>
+        </svg>
+      </div>
+      <span>Yönlendiriliyorsun…</span>
+    </div>
+
+  </div>
+
+  <div class="bottom-links">
+    <a href="index.html">↗ Ana sayfaya dön</a>
+  </div>
+
 </div>
 
 <script>
 (function () {
   const form = document.getElementById("login-form");
+  const pwd = document.getElementById("password");
+  const card = document.getElementById("card");
+  const wrap = document.getElementById("input-wrap");
   const errEl = document.getElementById("err");
+  const errText = document.getElementById("err-text");
   const btn = document.getElementById("submit-btn");
+  const btnLabel = btn.querySelector(".label");
+  const toggleBtn = document.getElementById("toggle-eye");
+  const eyeOpen = document.getElementById("eye-open");
+  const eyeClosed = document.getElementById("eye-closed");
+  const capsHint = document.getElementById("caps");
 
-  // If already logged in, redirect
+  // If already logged in, redirect immediately
   fetch("/api/auth/me", { credentials: "same-origin" })
-    .then(r => r.ok ? r.json() : null)
-    .then(j => { if (j && j.admin) location.replace("admin.html"); })
+    .then((r) => (r.ok ? r.json() : null))
+    .then((j) => { if (j && j.admin) location.replace("admin.html"); })
     .catch(() => {});
+
+  // Password visibility toggle
+  toggleBtn.addEventListener("click", () => {
+    const shown = pwd.type === "text";
+    pwd.type = shown ? "password" : "text";
+    eyeOpen.style.display = shown ? "" : "none";
+    eyeClosed.style.display = shown ? "none" : "";
+    toggleBtn.setAttribute("aria-label", shown ? "Şifreyi göster" : "Şifreyi gizle");
+    pwd.focus();
+  });
+
+  // Caps Lock detection
+  function updateCaps(e) {
+    const on = e && typeof e.getModifierState === "function" && e.getModifierState("CapsLock");
+    capsHint.classList.toggle("show", !!on);
+  }
+  pwd.addEventListener("keydown", updateCaps);
+  pwd.addEventListener("keyup", updateCaps);
+  pwd.addEventListener("blur", () => capsHint.classList.remove("show"));
+
+  // Clear error state as user types
+  pwd.addEventListener("input", () => {
+    wrap.classList.remove("error");
+    errEl.classList.remove("show");
+  });
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
-    errEl.style.display = "none";
-    btn.disabled = true; btn.textContent = "Giriş yapılıyor...";
+    const password = pwd.value;
+    if (!password) {
+      wrap.classList.add("error");
+      pwd.focus();
+      return;
+    }
+
+    errEl.classList.remove("show");
+    wrap.classList.remove("error");
+    btn.disabled = true;
+    btn.classList.add("loading");
+    btnLabel.textContent = "Kontrol ediliyor…";
+    pwd.disabled = true;
+
     try {
-      const password = document.getElementById("password").value;
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "same-origin",
         body: JSON.stringify({ password }),
       });
+
       if (res.ok) {
-        location.replace("admin.html");
+        // Success animation then redirect
+        btnLabel.textContent = "Başarılı";
+        card.classList.add("success");
+        setTimeout(() => location.replace("admin.html"), 650);
         return;
       }
+
       const data = await res.json().catch(() => ({}));
-      errEl.textContent = data.error || "Giriş başarısız";
-      errEl.style.display = "block";
+      const msg = data.error || "Şifre hatalı. Tekrar dene.";
+      errText.textContent = msg;
+      errEl.classList.add("show");
+      wrap.classList.add("error");
+      card.classList.remove("shake");
+      // retrigger shake animation
+      void card.offsetWidth;
+      card.classList.add("shake");
+
+      pwd.value = "";
+      pwd.focus();
     } catch (err) {
-      errEl.textContent = "Ağ hatası. Tekrar dene.";
-      errEl.style.display = "block";
+      errText.textContent = "Ağ hatası. İnternet bağlantını kontrol et ve tekrar dene.";
+      errEl.classList.add("show");
     } finally {
-      btn.disabled = false; btn.textContent = "Giriş yap";
+      btn.disabled = false;
+      btn.classList.remove("loading");
+      btnLabel.textContent = "Giriş yap";
+      pwd.disabled = false;
     }
   });
 })();
