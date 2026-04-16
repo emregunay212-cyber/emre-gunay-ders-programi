@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="theme-color" content="#0f1115" />
+<title>Sınıf Programı · Bilnet Balıkesir BT</title>
+<link rel="stylesheet" href="assets/style.css" />
+<style>
+  .search-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 18px;
+    align-items: center;
+  }
+  .search-row input {
+    flex: 1;
+    padding: 10px 12px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-size: 15px;
+    min-height: 42px;
+    font-family: inherit;
+  }
+  .class-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 24px;
+  }
+  .class-pill {
+    padding: 6px 12px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    font-size: 13px;
+    font-family: 'IBM Plex Mono', monospace, system-ui;
+    cursor: pointer;
+    transition: border-color 180ms, color 180ms;
+  }
+  .class-pill:hover { border-color: var(--text); }
+  .class-pill.active { background: var(--text); color: var(--bg); border-color: var(--text); }
+  .sinif-title {
+    font-size: 28px;
+    font-weight: 700;
+    margin: 4px 0 14px;
+    letter-spacing: -0.02em;
+  }
+  .sinif-title .hint { font-weight: 400; font-size: 13px; color: var(--muted); margin-left: 8px; letter-spacing: 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <a href="index.html" class="back">‹ Geri</a>
+    <div class="teacher-name">Sınıf Programı</div>
+  </header>
+
+  <div class="search-row">
+    <input type="text" id="q" placeholder="Sınıf ara (4/A, 6B, KAPLAN, 9/Fen-A ...)" autocomplete="off" />
+  </div>
+
+  <div class="class-list" id="class-list"></div>
+  <div class="sinif-title" id="sinif-title" style="display:none"></div>
+  <div id="content"></div>
+
+  <footer>Bilnet Balıkesir · Bilişim Teknolojileri</footer>
+</div>
+
+<script>
+(function () {
+  const GUN_AD = ["Pazar","Pazartesi","Salı","Çarşamba","Perşembe","Cuma","Cumartesi"];
+  const LAB_AD = { i: "İlkokul Lab", O: "Ortaokul Lab", L: "Lise Lab" };
+  let data = null;
+  let teacherById = {};
+
+  function el(tag, opts, ...children) {
+    const e = document.createElement(tag);
+    if (opts) {
+      if (opts.className) e.className = opts.className;
+      if (opts.text != null) e.textContent = opts.text;
+      if (opts.style) e.setAttribute("style", opts.style);
+      if (opts.attrs) for (const k in opts.attrs) e.setAttribute(k, opts.attrs[k]);
+      if (opts.on) for (const k in opts.on) e.addEventListener(k, opts.on[k]);
+    }
+    for (const c of children) {
+      if (c == null) continue;
+      if (typeof c === "string") e.appendChild(document.createTextNode(c));
+      else e.appendChild(c);
+    }
+    return e;
+  }
+  function clear(n) { while (n.firstChild) n.removeChild(n.firstChild); }
+
+  function parseHM(s) { const [h, m] = s.split(":").map(Number); return h * 60 + m; }
+
+  function uniqueClasses() {
+    if (!data) return [];
+    const set = new Map();
+    for (const l of data.lessons || []) {
+      if (!l.ad || l.kademe === "toplanti") continue;
+      set.set(l.ad, (set.get(l.ad) || 0) + 1);
+    }
+    return [...set.entries()].sort((a, b) => a[0].localeCompare(b[0], "tr"));
+  }
+
+  function lessonsFor(cls) {
+    return (data.lessons || [])
+      .filter(l => l.ad === cls)
+      .sort((a, b) => a.gun - b.gun || parseHM(a.bas) - parseHM(b.bas));
+  }
+
+  function renderPills(filter) {
+    const wrap = document.getElementById("class-list");
+    clear(wrap);
+    const q = (filter || "").toLocaleLowerCase("tr-TR");
+    const all = uniqueClasses();
+    const filtered = q ? all.filter(([n]) => n.toLocaleLowerCase("tr-TR").includes(q)) : all;
+    if (!filtered.length) {
+      wrap.appendChild(el("div", { style: "color: var(--muted); font-size: 13px;", text: "Eşleşen sınıf yok" }));
+      return;
+    }
+    const url = new URL(location.href);
+    const active = url.searchParams.get("sinif");
+    for (const [cls, count] of filtered) {
+      const pill = el("button", {
+        className: "class-pill" + (cls === active ? " active" : ""),
+        on: { click: () => show(cls) },
+        text: cls,
+      });
+      wrap.appendChild(pill);
+    }
+  }
+
+  function show(cls) {
+    const url = new URL(location.href);
+    url.searchParams.set("sinif", cls);
+    history.replaceState(null, "", url);
+    renderPills(document.getElementById("q").value);
+
+    const title = document.getElementById("sinif-title");
+    const content = document.getElementById("content");
+    clear(content);
+    title.style.display = "block";
+    clear(title);
+    title.appendChild(document.createTextNode(cls));
+    const ls = lessonsFor(cls);
+    title.appendChild(el("span", { className: "hint", text: ls.length + " ders / hafta" }));
+
+    if (!ls.length) {
+      content.appendChild(el("div", { className: "card empty", text: "Bu sınıf için ders kaydı yok" }));
+      return;
+    }
+
+    const byDay = new Map();
+    for (const l of ls) {
+      if (!byDay.has(l.gun)) byDay.set(l.gun, []);
+      byDay.get(l.gun).push(l);
+    }
+    for (let g = 1; g <= 5; g++) {
+      const day = byDay.get(g);
+      if (!day || !day.length) continue;
+      const section = el("div", { className: "day" });
+      section.appendChild(el("div", { className: "day-name", text: GUN_AD[g] }));
+      const chips = el("div", { className: "chips" });
+      for (const l of day) {
+        const chip = el("span", { className: "chip k-" + l.kademe, style: "color: var(--" + l.kademe + ");" });
+        chip.appendChild(el("span", { className: "t", text: l.bas }));
+        chip.appendChild(document.createTextNode((teacherById[l.teacherId] && teacherById[l.teacherId].name.split(" ").slice(-1)[0]) || ""));
+        if (l.lab) chip.appendChild(el("span", { className: "lb", text: l.lab }));
+        chips.appendChild(chip);
+      }
+      section.appendChild(chips);
+      content.appendChild(section);
+    }
+  }
+
+  async function load() {
+    try {
+      const r = await fetch("/api/schedules", { credentials: "same-origin" });
+      if (r.ok) data = await r.json();
+    } catch {}
+    if (!data) {
+      document.getElementById("content").appendChild(
+        el("div", { className: "card empty", text: "Veri yüklenemedi — /api/schedules erişilemiyor." })
+      );
+      return;
+    }
+    teacherById = Object.fromEntries((data.teachers || []).map(t => [t.id, t]));
+    renderPills("");
+    const url = new URL(location.href);
+    const init = url.searchParams.get("sinif");
+    if (init) show(init);
+  }
+
+  document.getElementById("q").addEventListener("input", (e) => renderPills(e.target.value));
+  load();
+})();
+</script>
+</body>
+</html>
