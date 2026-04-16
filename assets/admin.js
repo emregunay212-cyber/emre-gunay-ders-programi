@@ -1352,6 +1352,11 @@
       setKvStatus("ok", "bağlı · " + state.teachers.length + " öğretmen");
       updateStats();
       renderTeachers();
+      // Trigger 30-min timeout check on admin panel load (replaces Vercel cron on Hobby plan)
+      fetch("/api/cron/check-pending", { credentials: "same-origin" })
+        .then(r => r.ok ? r.json() : null)
+        .then(j => { if (j && j.escalated > 0) console.log("Escalated " + j.escalated + " pending approvals"); })
+        .catch(() => {});
     } catch (err) {
       setKvStatus("err", "KV hatası");
       const area = document.getElementById("teachers-area");

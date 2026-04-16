@@ -17,16 +17,25 @@ function fmtDateTR(iso) {
   return d.getUTCDate() + " " + AY_AD[d.getUTCMonth()] + " " + GUN_AD[d.getUTCDay()];
 }
 
-function isAuthed(req) {
+async function isAuthed(req) {
+  // Vercel cron invocation
   if (req.headers["x-vercel-cron"]) return true;
+  // Optional shared secret for external cron services / manual testing
   const auth = req.headers.authorization || "";
   const secret = process.env.CRON_SECRET;
   if (secret && auth === "Bearer " + secret) return true;
+  // Admin session: the admin panel calls this on load as a poor-man's cron
+  // (Hobby plan limits us to 1 cron/day; delegating to admin panel is fine).
+  try {
+    const { getSessionFromReq } = await import("../_lib/auth.js");
+    const session = await getSessionFromReq(req);
+    if (session && session.role === "admin") return true;
+  } catch {}
   return false;
 }
 
 export default async function handler(req, res) {
-  if (!isAuthed(req)) return res.status(401).json({ error: "Unauthorized" });
+  if (!(await isAuthed(req))) return res.status(401).json({ error: "Unauthorized" });
 
   try {
     const data = await loadAll();
