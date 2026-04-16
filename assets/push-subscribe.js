@@ -60,17 +60,22 @@
 
   function wait(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-  async function subscribe() {
-    const slug = teacherSlug();
-    if (!slug) return { ok: false, error: "no-slug" };
+  // Creates (or reuses) a browser push subscription. Does NOT register
+  // it with the server — the caller does that via setSubscriptionSlugs
+  // after the user picks teachers in the modal.
+  async function ensureBrowserSubscription() {
     if (!isPushSupported()) return { ok: false, error: "not-supported" };
-    let browserSub = null;
     let step = "init";
     try {
       step = "register-sw";
       await navigator.serviceWorker.register("/sw.js");
       step = "sw-ready";
       const reg = await navigator.serviceWorker.ready;
+
+      // Fast path — existing subscription.
+      const existing = await reg.pushManager.getSubscription();
+      if (existing) return { ok: true, subscription: existing };
+
       step = "permission";
       const permission = await Notification.requestPermission();
       if (permission !== "granted") return { ok: false, error: "denied" };
@@ -79,22 +84,8 @@
       if (!vapid) return { ok: false, error: "no-vapid" };
       const appServerKey = urlBase64ToUint8Array(vapid);
 
-      // Clear any stale subscription. Browsers throw "Registration failed"
-      // when an existing subscription was created with a different
-      // applicationServerKey (VAPID rotation, prior deploy, etc.).
-      step = "unsubscribe-old";
-      try {
-        const existing = await reg.pushManager.getSubscription();
-        if (existing) {
-          await existing.unsubscribe();
-          // Some Android Chrome builds need a brief pause before the push
-          // service considers the previous registration gone.
-          await wait(300);
-        }
-      } catch {}
-
-      // Subscribe, with one retry on transient push-service errors.
       step = "subscribe";
+      let browserSub;
       try {
         browserSub = await reg.pushManager.subscribe({
           userVisibleOnly: true,
@@ -103,7 +94,6 @@
       } catch (firstErr) {
         step = "subscribe-retry";
         await wait(1200);
-        // Make sure nothing was left behind by the failed attempt
         try {
           const leftover = await reg.pushManager.getSubscription();
           if (leftover) { await leftover.unsubscribe(); await wait(300); }
@@ -113,77 +103,210 @@
           applicationServerKey: appServerKey,
         });
       }
-
-      step = "server-save";
-      const subJson = browserSub.toJSON();
-      const res = await fetch("/api/push?action=subscribe", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ teacherSlug: slug, subscription: subJson }),
-      });
-      if (!res.ok) {
-        // Server did not persist the subscription. Roll back the browser
-        // subscription so the UI doesn't show "Bildirim açık" while the
-        // server thinks this teacher has no sub (silent push failures).
-        try { await browserSub.unsubscribe(); } catch {}
-        let serverMsg = "server-error";
-        try { const j = await res.json(); if (j && j.error) serverMsg = j.error; } catch {}
-        return { ok: false, error: serverMsg };
-      }
       return { ok: true, subscription: browserSub };
     } catch (err) {
-      if (browserSub) { try { await browserSub.unsubscribe(); } catch {} }
       const msg = (err && err.message) ? err.message : String(err);
       console.error("Subscribe error at step:", step, err);
       return { ok: false, error: "[" + step + "] " + msg };
     }
   }
 
-  async function unsubscribe() {
-    const slug = teacherSlug();
+  async function fetchAllTeachers() {
     try {
-      const sub = await currentSubscription();
-      if (sub) {
-        const endpoint = sub.endpoint;
-        await sub.unsubscribe();
-        await fetch("/api/push?action=unsubscribe", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ teacherSlug: slug, endpoint }),
-        }).catch(() => {});
-      }
-      return { ok: true };
-    } catch (err) {
-      return { ok: false, error: String(err && err.message || err) };
-    }
+      const r = await fetch("/api/schedules?mode=today", { credentials: "same-origin", cache: "no-store" });
+      if (!r.ok) return [];
+      const j = await r.json();
+      return j.teachers || [];
+    } catch { return []; }
   }
 
-  // Check with the server whether THIS browser's subscription endpoint is
-  // registered for THIS teacher's slug. Returns true only when the current
-  // page's teacher actually owns this endpoint on the server — prevents
-  // the button from showing "Bildirim açık" on a page the user never
-  // subscribed for (e.g. admin visiting halil.html after subscribing as
-  // emre would otherwise wrongly display "açık" here).
-  async function isRegisteredForCurrentTeacher(sub) {
-    const slug = teacherSlug();
-    if (!slug || !sub) return false;
+  async function fetchCurrentSlugs(endpoint) {
+    if (!endpoint) return [];
     try {
-      const r = await fetch("/api/push?action=check", {
+      const r = await fetch("/api/push?action=list-slugs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ teacherSlug: slug, endpoint: sub.endpoint }),
+        body: JSON.stringify({ endpoint }),
       });
-      if (!r.ok) return false;
+      if (!r.ok) return [];
       const j = await r.json();
-      return !!j.subscribed;
+      return j.slugs || [];
+    } catch { return []; }
+  }
+
+  async function setSubscriptionSlugs(subscription, slugs) {
+    try {
+      const r = await fetch("/api/push?action=set", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          subscription: subscription.toJSON(),
+          teacherSlugs: slugs,
+        }),
+      });
+      return r.ok;
     } catch { return false; }
+  }
+
+  function ensurePushModalStyles() {
+    if (document.getElementById("push-modal-styles")) return;
+    const style = document.createElement("style");
+    style.id = "push-modal-styles";
+    style.textContent = `
+.push-modal-backdrop {
+  position: fixed; inset: 0; z-index: 2000;
+  background: rgba(0,0,0,0.7); backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center;
+  padding: 16px;
+}
+.push-modal {
+  background: #14161f; border: 1px solid #262a38; border-radius: 14px;
+  padding: 22px; width: 100%; max-width: 420px;
+  color: #f0f2f7; font-family: system-ui, -apple-system, sans-serif;
+  box-shadow: 0 24px 60px rgba(0,0,0,0.6);
+}
+.push-modal-title {
+  font-size: 17px; font-weight: 700; letter-spacing: -0.01em;
+  margin-bottom: 6px;
+}
+.push-modal-sub {
+  font-size: 12px; color: #868ca3; margin-bottom: 16px;
+}
+.push-modal-list {
+  display: flex; flex-direction: column; gap: 6px;
+  max-height: 50vh; overflow-y: auto; margin-bottom: 18px;
+}
+.push-modal-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 11px 12px; border-radius: 10px;
+  background: #1b1d28; border: 1px solid #262a38;
+  cursor: pointer; transition: background 0.15s, border-color 0.15s;
+}
+.push-modal-row:hover { background: #20232f; border-color: #353a4c; }
+.push-modal-row input[type=checkbox] {
+  width: 18px; height: 18px; accent-color: #fbbf24; cursor: pointer;
+}
+.push-modal-row.checked { background: rgba(251,191,36,0.08); border-color: rgba(251,191,36,0.4); }
+.push-modal-name { font-size: 14px; font-weight: 600; }
+.push-modal-actions {
+  display: flex; gap: 10px; justify-content: flex-end;
+}
+.push-modal-btn {
+  padding: 9px 16px; border-radius: 8px; border: none;
+  font-size: 13px; font-weight: 700; cursor: pointer;
+  font-family: inherit;
+}
+.push-modal-btn.primary { background: #fbbf24; color: #1a1205; }
+.push-modal-btn.primary:disabled { opacity: 0.6; cursor: default; }
+.push-modal-btn.secondary {
+  background: transparent; color: #868ca3; border: 1px solid #353a4c;
+}
+.push-modal-clear {
+  background: transparent; color: #f87171; border: none;
+  font-size: 12px; cursor: pointer; margin-right: auto;
+  padding: 8px 0;
+}
+`;
+    document.head.appendChild(style);
+  }
+
+  async function openSelectionModal() {
+    // Make sure we have a browser subscription before showing the list
+    const ensured = await ensureBrowserSubscription();
+    if (!ensured.ok) {
+      alert("Bildirim açılamadı: " + ensured.error);
+      return;
+    }
+    const sub = ensured.subscription;
+
+    const [teachers, currentSlugs] = await Promise.all([
+      fetchAllTeachers(),
+      fetchCurrentSlugs(sub.endpoint),
+    ]);
+    const checkedSet = new Set(currentSlugs);
+    // First-time flow: preselect the teacher of the page we're on
+    if (checkedSet.size === 0) {
+      const mySlug = teacherSlug();
+      if (mySlug) checkedSet.add(mySlug);
+    }
+
+    ensurePushModalStyles();
+
+    const backdrop = el("div", { className: "push-modal-backdrop" });
+    const modal = el("div", { className: "push-modal" });
+    modal.appendChild(el("div", { className: "push-modal-title", text: "Kimin bildirimlerini alacaksın?" }));
+    modal.appendChild(el("div", {
+      className: "push-modal-sub",
+      text: "Seçtiğin öğretmen(ler)in bildirimleri bu cihaza düşer. Seçim istediğin zaman değiştirilebilir.",
+    }));
+
+    const list = el("div", { className: "push-modal-list" });
+    const selections = new Map();
+    for (const t of teachers) {
+      const row = el("label", { className: "push-modal-row" + (checkedSet.has(t.slug) ? " checked" : "") });
+      const cb = el("input", { attrs: { type: "checkbox" } });
+      cb.checked = checkedSet.has(t.slug);
+      selections.set(t.slug, cb.checked);
+      cb.addEventListener("change", () => {
+        selections.set(t.slug, cb.checked);
+        if (cb.checked) row.classList.add("checked");
+        else row.classList.remove("checked");
+      });
+      row.appendChild(cb);
+      row.appendChild(el("span", { className: "push-modal-name", text: t.name }));
+      list.appendChild(row);
+    }
+    modal.appendChild(list);
+
+    const actions = el("div", { className: "push-modal-actions" });
+    const clearBtn = el("button", { className: "push-modal-clear", text: "Tümünü kapat" });
+    const cancelBtn = el("button", { className: "push-modal-btn secondary", text: "İptal" });
+    const saveBtn = el("button", { className: "push-modal-btn primary", text: "Kaydet" });
+
+    function close() {
+      if (backdrop.parentNode) backdrop.parentNode.removeChild(backdrop);
+    }
+
+    clearBtn.addEventListener("click", () => {
+      for (const [slug] of selections) selections.set(slug, false);
+      for (const r of list.querySelectorAll(".push-modal-row")) {
+        r.classList.remove("checked");
+        const cb = r.querySelector("input");
+        if (cb) cb.checked = false;
+      }
+    });
+    cancelBtn.addEventListener("click", close);
+    backdrop.addEventListener("click", (e) => { if (e.target === backdrop) close(); });
+    saveBtn.addEventListener("click", async () => {
+      saveBtn.disabled = true; saveBtn.textContent = "Kaydediliyor…";
+      const picked = [];
+      for (const [slug, checked] of selections) if (checked) picked.push(slug);
+      const ok = await setSubscriptionSlugs(sub, picked);
+      if (!ok) {
+        saveBtn.disabled = false; saveBtn.textContent = "Kaydet";
+        alert("Kayıt yapılamadı, tekrar deneyin.");
+        return;
+      }
+      if (picked.length === 0) {
+        // No teachers selected — release browser sub too
+        try { await sub.unsubscribe(); } catch {}
+      }
+      close();
+      renderSubscribeButton();
+    });
+
+    actions.appendChild(clearBtn);
+    actions.appendChild(cancelBtn);
+    actions.appendChild(saveBtn);
+    modal.appendChild(actions);
+    backdrop.appendChild(modal);
+    document.body.appendChild(backdrop);
   }
 
   async function renderSubscribeButton() {
     const host = document.querySelector("header.top");
     if (!host) return;
 
-    // Avoid duplicating
     let btn = document.getElementById("push-toggle");
     if (!btn) {
       btn = el("button", { attrs: { id: "push-toggle", type: "button" }, className: "push-toggle" });
@@ -196,11 +319,7 @@
       btn.classList.add("disabled");
       return;
     }
-
-    const permission = Notification.permission;
-    const sub = await currentSubscription().catch(() => null);
-
-    if (permission === "denied") {
+    if (Notification.permission === "denied") {
       btn.textContent = "🔕 Tarayıcı izin vermedi";
       btn.disabled = true;
       btn.classList.remove("on"); btn.classList.add("disabled");
@@ -210,31 +329,21 @@
     btn.disabled = false;
     btn.classList.remove("disabled");
 
-    // A browser subscription alone isn't enough — it must also be
-    // registered for THIS teacher on the server. Otherwise we'd show
-    // "açık" on a page the user never subscribed for.
-    const registeredHere = sub ? await isRegisteredForCurrentTeacher(sub) : false;
+    const sub = await currentSubscription().catch(() => null);
+    const slugs = sub ? await fetchCurrentSlugs(sub.endpoint) : [];
 
-    if (sub && registeredHere) {
-      btn.textContent = "🔔 Bildirim açık";
+    if (slugs.length > 0) {
+      btn.textContent = slugs.length === 1
+        ? "🔔 Bildirim: 1 öğretmen"
+        : "🔔 Bildirim: " + slugs.length + " öğretmen";
       btn.classList.add("on");
-      btn.onclick = async () => {
-        btn.disabled = true; btn.textContent = "…";
-        await unsubscribe();
-        await renderSubscribeButton();
-      };
+      btn.title = "Değiştirmek için tıkla";
     } else {
       btn.textContent = "🔔 Bildirim aç";
       btn.classList.remove("on");
-      btn.onclick = async () => {
-        btn.disabled = true; btn.textContent = "…";
-        const r = await subscribe();
-        if (!r.ok) {
-          alert("Bildirim açılamadı: " + r.error);
-        }
-        await renderSubscribeButton();
-      };
+      btn.title = "Öğretmen seç ve bildirimleri aç";
     }
+    btn.onclick = openSelectionModal;
   }
 
   // -------------- Pending approval card --------------

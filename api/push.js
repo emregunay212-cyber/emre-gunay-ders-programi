@@ -49,6 +49,51 @@ export default async function handler(req, res) {
       await saveTeachers(teachers);
       return res.status(200).json({ ok: true, count: teachers[idx].pushSubscriptions.length });
     }
+    if (req.method === "POST" && action === "list-slugs") {
+      // Returns the slugs of every teacher whose pushSubscriptions
+      // contains this endpoint. Used by the selection modal to
+      // pre-check the teachers this device is already receiving
+      // notifications for.
+      const body = await readJsonBody(req);
+      const endpoint = typeof body.endpoint === "string" ? body.endpoint : "";
+      if (!endpoint) return badRequest(res, "endpoint gerekli");
+      const { teachers } = await loadAll();
+      const slugs = teachers
+        .filter(t => Array.isArray(t.pushSubscriptions) && t.pushSubscriptions.some(s => s.endpoint === endpoint))
+        .map(t => t.slug);
+      return res.status(200).json({ slugs });
+    }
+    if (req.method === "POST" && action === "set") {
+      // Atomically set this endpoint's registrations to EXACTLY the
+      // given list of teacher slugs. Adds the endpoint to each target
+      // teacher's pushSubscriptions and removes it from every other
+      // teacher. Empty list → endpoint is removed everywhere.
+      const body = await readJsonBody(req);
+      const sub = body.subscription;
+      const wanted = Array.isArray(body.teacherSlugs)
+        ? body.teacherSlugs.filter(s => typeof s === "string")
+        : null;
+      if (!sub || typeof sub !== "object" || !sub.endpoint || !sub.keys || !sub.keys.p256dh || !sub.keys.auth) {
+        return badRequest(res, "Geçersiz subscription");
+      }
+      if (wanted === null) return badRequest(res, "teacherSlugs array olmalı");
+      const { teachers } = await loadAll();
+      const clean = { endpoint: sub.endpoint, keys: { p256dh: sub.keys.p256dh, auth: sub.keys.auth } };
+      const target = new Set(wanted);
+      for (const t of teachers) {
+        if (!Array.isArray(t.pushSubscriptions)) t.pushSubscriptions = [];
+        const idx = t.pushSubscriptions.findIndex(s => s.endpoint === sub.endpoint);
+        const shouldHave = target.has(t.slug);
+        if (shouldHave) {
+          if (idx >= 0) t.pushSubscriptions[idx] = clean;
+          else t.pushSubscriptions.push(clean);
+        } else if (idx >= 0) {
+          t.pushSubscriptions.splice(idx, 1);
+        }
+      }
+      await saveTeachers(teachers);
+      return res.status(200).json({ ok: true, slugs: Array.from(target) });
+    }
     if (req.method === "POST" && action === "check") {
       // Reports whether THIS endpoint is registered for THIS teacher's
       // slug on the server. Used by the UI to render "Bildirim açık"
