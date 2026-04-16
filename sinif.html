@@ -7,48 +7,366 @@
 <title>Sınıf Programı · Bilnet Balıkesir BT</title>
 <link rel="stylesheet" href="assets/style.css" />
 <style>
-  .search-row {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 18px;
-    align-items: center;
+  /* ---- Masthead ---- */
+  .sinif-masthead {
+    padding: 28px 0 24px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 24px;
   }
-  .search-row input {
-    flex: 1;
-    padding: 10px 12px;
+  .sinif-eyebrow {
+    font-family: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+    font-size: 10px;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+  .sinif-h1 {
+    font-size: clamp(28px, 5vw, 42px);
+    font-weight: 800;
+    letter-spacing: -0.025em;
+    line-height: 1.05;
+    margin-bottom: 6px;
+  }
+  .sinif-sub {
+    font-size: 14px;
+    color: var(--muted);
+    max-width: 60ch;
+  }
+  .sinif-sub kbd {
     background: var(--card);
     border: 1px solid var(--border);
-    border-radius: 10px;
+    border-radius: 4px;
+    padding: 1px 5px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--text);
+  }
+
+  /* ---- Search ---- */
+  .search-wrap {
+    position: relative;
+    margin-bottom: 28px;
+  }
+  .search-wrap svg.search-icon {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 16px;
+    height: 16px;
+    color: var(--muted);
+    pointer-events: none;
+  }
+  .search-wrap input {
+    width: 100%;
+    padding: 14px 42px 14px 42px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
     color: var(--text);
     font-size: 15px;
-    min-height: 42px;
     font-family: inherit;
+    transition: border-color 150ms, background 150ms;
   }
+  .search-wrap input::placeholder { color: var(--muted); }
+  .search-wrap input:focus {
+    outline: none;
+    border-color: color-mix(in srgb, var(--text) 40%, var(--border));
+    background: color-mix(in srgb, var(--card) 75%, var(--bg));
+  }
+  .search-clear {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    font-size: 20px;
+    cursor: pointer;
+    padding: 6px 10px;
+    display: none;
+    border-radius: 6px;
+    line-height: 1;
+  }
+  .search-clear:hover { color: var(--text); background: var(--card-2); }
+  .search-wrap.has-value .search-clear { display: block; }
+
+  /* ---- Kademe groups ---- */
+  .kademe-block { margin-bottom: 22px; }
+  .kademe-block:last-child { margin-bottom: 0; }
+  .kademe-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .kademe-name {
+    font-family: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+    font-size: 11px;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--text);
+    font-weight: 700;
+  }
+  .kademe-name.k-anaokulu { color: var(--anaokulu); }
+  .kademe-name.k-ilkokul  { color: var(--ilkokul); }
+  .kademe-name.k-ortaokul { color: var(--ortaokul); }
+  .kademe-name.k-lise     { color: var(--lise); }
+  .kademe-name.k-amazing  { color: var(--amazing); }
+  .kademe-count {
+    font-family: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .kademe-rule { flex: 1; height: 1px; background: var(--border); }
+
+  /* ---- Pills ---- */
   .class-list {
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
-    margin-bottom: 24px;
   }
   .class-pill {
-    padding: 6px 12px;
+    padding: 7px 12px 7px 26px;
     background: var(--card);
     border: 1px solid var(--border);
-    border-radius: 999px;
+    border-radius: 8px;
     font-size: 13px;
-    font-family: 'IBM Plex Mono', monospace, system-ui;
+    font-family: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+    font-weight: 500;
+    color: var(--text);
     cursor: pointer;
-    transition: border-color 180ms, color 180ms;
+    transition: transform 140ms, border-color 140ms, background 140ms;
+    position: relative;
+    letter-spacing: 0.02em;
   }
-  .class-pill:hover { border-color: var(--text); }
-  .class-pill.active { background: var(--text); color: var(--bg); border-color: var(--text); }
-  .sinif-title {
-    font-size: 28px;
+  .class-pill::before {
+    content: "";
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+    opacity: 0.85;
+  }
+  .class-pill.k-anaokulu { --pill-c: var(--anaokulu); }
+  .class-pill.k-ilkokul  { --pill-c: var(--ilkokul); }
+  .class-pill.k-ortaokul { --pill-c: var(--ortaokul); }
+  .class-pill.k-lise     { --pill-c: var(--lise); }
+  .class-pill.k-amazing  { --pill-c: var(--amazing); }
+  .class-pill::before { background: var(--pill-c, var(--muted)); }
+  .class-pill:hover {
+    border-color: color-mix(in srgb, var(--pill-c, var(--text)) 50%, var(--border));
+    transform: translateY(-1px);
+    background: color-mix(in srgb, var(--pill-c, var(--text)) 6%, var(--card));
+  }
+  .class-pill.active {
+    background: var(--pill-c, var(--text));
+    border-color: var(--pill-c, var(--text));
+    color: var(--bg);
     font-weight: 700;
-    margin: 4px 0 14px;
-    letter-spacing: -0.02em;
   }
-  .sinif-title .hint { font-weight: 400; font-size: 13px; color: var(--muted); margin-left: 8px; letter-spacing: 0; }
+  .class-pill.active::before { background: var(--bg); opacity: 1; }
+
+  /* ---- Hint bar ---- */
+  .hint-bar {
+    font-family: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px dashed var(--border);
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  .hint-bar kbd {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 1px 5px;
+    font-family: inherit;
+    color: var(--text);
+  }
+
+  /* ---- Detail panel ---- */
+  .sinif-detail {
+    margin-top: 36px;
+    padding-top: 28px;
+    border-top: 1px dashed var(--border);
+    animation: fade-in 240ms ease-out;
+  }
+  @keyframes fade-in {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .detail-eyebrow {
+    font-family: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+    font-size: 10px;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .detail-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px 18px;
+    margin-bottom: 22px;
+  }
+  .detail-title {
+    font-size: clamp(30px, 5vw, 48px);
+    font-weight: 800;
+    letter-spacing: -0.028em;
+    line-height: 1;
+  }
+  .detail-meta {
+    font-family: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .detail-meta strong { color: var(--text); font-weight: 700; }
+
+  /* ---- Day timeline ---- */
+  .day-timeline {
+    display: flex;
+    flex-direction: column;
+  }
+  .day-block {
+    display: grid;
+    grid-template-columns: 120px 1fr;
+    gap: 20px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .day-block:last-child { border-bottom: none; }
+  .day-block.today {
+    background: color-mix(in srgb, var(--text) 4%, transparent);
+    border-radius: 10px;
+    padding: 16px 14px;
+    margin: 4px 0;
+    border-bottom-color: transparent;
+  }
+  .day-label {
+    font-family: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+    font-size: 11px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding-top: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .day-block.today .day-label { color: var(--text); font-weight: 700; }
+  .today-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--ilkokul);
+    box-shadow: 0 0 10px var(--ilkokul);
+  }
+  .day-lessons {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .lesson-row {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 16px;
+    align-items: center;
+    padding: 11px 14px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-left: 3px solid currentColor;
+    border-radius: 8px;
+    transition: border-color 140ms, transform 140ms;
+  }
+  .lesson-row:hover {
+    transform: translateX(2px);
+    border-left-width: 4px;
+    padding-left: 13px;
+  }
+  .lesson-time {
+    font-family: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+    font-size: 13px;
+    color: var(--text);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+  .lesson-teacher {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text);
+  }
+  .lesson-teacher .surname { color: var(--muted); font-weight: 400; }
+  .lesson-lab {
+    font-family: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 4px 8px;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    background: var(--bg);
+  }
+
+  /* ---- Empty / error states ---- */
+  .empty-state {
+    padding: 56px 20px;
+    text-align: center;
+  }
+  .empty-state .ic {
+    font-size: 36px;
+    margin-bottom: 12px;
+    opacity: 0.5;
+  }
+  .empty-state .ttl {
+    font-size: 15px;
+    color: var(--text);
+    margin-bottom: 4px;
+    font-weight: 600;
+  }
+  .empty-state .sb {
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  /* ---- Mobile ---- */
+  @media (max-width: 640px) {
+    .day-block {
+      grid-template-columns: 1fr;
+      gap: 10px;
+      padding: 14px 0;
+    }
+    .day-block.today { padding: 14px 12px; }
+    .day-label { padding-top: 0; }
+    .lesson-row {
+      grid-template-columns: auto 1fr;
+      gap: 12px;
+      padding: 10px 12px;
+    }
+    .lesson-row:hover { transform: none; border-left-width: 3px; padding-left: 12px; }
+    .lesson-lab {
+      grid-column: 1 / -1;
+      justify-self: start;
+    }
+  }
 </style>
 </head>
 <body>
@@ -58,12 +376,23 @@
     <div class="teacher-name">Sınıf Programı</div>
   </header>
 
-  <div class="search-row">
-    <input type="text" id="q" placeholder="Sınıf ara (4/A, 6B, KAPLAN, 9/Fen-A ...)" autocomplete="off" />
+  <div class="sinif-masthead">
+    <div class="sinif-eyebrow">Sınıf Programı · BT</div>
+    <div class="sinif-h1">Haftalık ders çizelgesi</div>
+    <div class="sinif-sub">
+      Sınıfını ara ya da kademeden seç. <kbd>/</kbd> tuşuyla arama alanına geç, <kbd>Esc</kbd> ile temizle.
+    </div>
   </div>
 
-  <div class="class-list" id="class-list"></div>
-  <div class="sinif-title" id="sinif-title" style="display:none"></div>
+  <div class="search-wrap" id="search-wrap">
+    <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <circle cx="11" cy="11" r="7"/><path d="m20 20-3-3"/>
+    </svg>
+    <input type="text" id="q" placeholder="4/A · KAPLAN · 9/Fen-A · 10/AND-B ..." autocomplete="off" />
+    <button class="search-clear" id="q-clear" title="Aramayı temizle" aria-label="Aramayı temizle">×</button>
+  </div>
+
+  <div id="class-groups"></div>
   <div id="content"></div>
 
   <footer>Bilnet Balıkesir · Bilişim Teknolojileri</footer>
@@ -72,7 +401,14 @@
 <script>
 (function () {
   const GUN_AD = ["Pazar","Pazartesi","Salı","Çarşamba","Perşembe","Cuma","Cumartesi"];
-  const LAB_AD = { i: "İlkokul Lab", O: "Ortaokul Lab", L: "Lise Lab" };
+  const KADEME_ORDER = ["anaokulu", "ilkokul", "ortaokul", "lise", "amazing"];
+  const KADEME_LABEL = {
+    anaokulu: "Anaokulu",
+    ilkokul:  "İlkokul",
+    ortaokul: "Ortaokul",
+    lise:     "Lise",
+    amazing:  "Amazing",
+  };
   let data = null;
   let teacherById = {};
 
@@ -93,17 +429,45 @@
     return e;
   }
   function clear(n) { while (n.firstChild) n.removeChild(n.firstChild); }
-
   function parseHM(s) { const [h, m] = s.split(":").map(Number); return h * 60 + m; }
+  function todayGun() {
+    const d = new Date().getDay();
+    return d >= 1 && d <= 5 ? d : 0;
+  }
+  function emptyState(icon, title, sub) {
+    const w = el("div", { className: "empty-state" });
+    w.appendChild(el("div", { className: "ic", text: icon }));
+    w.appendChild(el("div", { className: "ttl", text: title }));
+    if (sub) w.appendChild(el("div", { className: "sb", text: sub }));
+    return w;
+  }
 
-  function uniqueClasses() {
-    if (!data) return [];
-    const set = new Map();
+  // Most common kademe for a class name (data defensive)
+  function classKademe(cls) {
+    const counts = {};
+    for (const l of data.lessons) {
+      if (l.ad === cls && l.kademe) counts[l.kademe] = (counts[l.kademe] || 0) + 1;
+    }
+    let best = null, bestN = 0;
+    for (const k in counts) if (counts[k] > bestN) { best = k; bestN = counts[k]; }
+    return best || "ilkokul";
+  }
+
+  function classesByKademe() {
+    if (!data) return new Map();
+    const nameToKademe = new Map();
     for (const l of data.lessons || []) {
       if (!l.ad || l.kademe === "toplanti") continue;
-      set.set(l.ad, (set.get(l.ad) || 0) + 1);
+      if (!nameToKademe.has(l.ad)) nameToKademe.set(l.ad, classKademe(l.ad));
     }
-    return [...set.entries()].sort((a, b) => a[0].localeCompare(b[0], "tr"));
+    const grouped = new Map();
+    for (const k of KADEME_ORDER) grouped.set(k, []);
+    for (const [cls, kd] of nameToKademe) {
+      if (!grouped.has(kd)) grouped.set(kd, []);
+      grouped.get(kd).push(cls);
+    }
+    for (const arr of grouped.values()) arr.sort((a, b) => a.localeCompare(b, "tr"));
+    return grouped;
   }
 
   function lessonsFor(cls) {
@@ -112,45 +476,103 @@
       .sort((a, b) => a.gun - b.gun || parseHM(a.bas) - parseHM(b.bas));
   }
 
-  function renderPills(filter) {
-    const wrap = document.getElementById("class-list");
+  function renderGroups(filter) {
+    const wrap = document.getElementById("class-groups");
     clear(wrap);
-    const q = (filter || "").toLocaleLowerCase("tr-TR");
-    const all = uniqueClasses();
-    const filtered = q ? all.filter(([n]) => n.toLocaleLowerCase("tr-TR").includes(q)) : all;
-    if (!filtered.length) {
-      wrap.appendChild(el("div", { style: "color: var(--muted); font-size: 13px;", text: "Eşleşen sınıf yok" }));
-      return;
-    }
+    const q = (filter || "").toLocaleLowerCase("tr-TR").trim();
+    const grouped = classesByKademe();
     const url = new URL(location.href);
     const active = url.searchParams.get("sinif");
-    for (const [cls, count] of filtered) {
-      const pill = el("button", {
-        className: "class-pill" + (cls === active ? " active" : ""),
-        on: { click: () => show(cls) },
-        text: cls,
-      });
-      wrap.appendChild(pill);
+    let totalShown = 0;
+
+    for (const kademe of KADEME_ORDER) {
+      const classes = (grouped.get(kademe) || []).filter(n =>
+        !q || n.toLocaleLowerCase("tr-TR").includes(q)
+      );
+      if (!classes.length) continue;
+
+      const block = el("div", { className: "kademe-block" });
+      const head = el("div", { className: "kademe-head" });
+      head.appendChild(el("div", {
+        className: "kademe-name k-" + kademe,
+        text: KADEME_LABEL[kademe] || kademe,
+      }));
+      head.appendChild(el("div", { className: "kademe-count", text: classes.length + " sınıf" }));
+      head.appendChild(el("div", { className: "kademe-rule" }));
+      block.appendChild(head);
+
+      const list = el("div", { className: "class-list" });
+      for (const cls of classes) {
+        const pill = el("button", {
+          className: "class-pill k-" + kademe + (cls === active ? " active" : ""),
+          on: { click: () => show(cls) },
+          attrs: { type: "button" },
+          text: cls,
+        });
+        list.appendChild(pill);
+        totalShown++;
+      }
+      block.appendChild(list);
+      wrap.appendChild(block);
     }
+
+    if (totalShown === 0) {
+      wrap.appendChild(emptyState("🔍", "Eşleşen sınıf yok", "Farklı bir arama dene (4/A, KAPLAN, 9/Fen...)"));
+      return;
+    }
+
+    // Quick hint bar under the groups
+    const hint = el("div", { className: "hint-bar" });
+    hint.appendChild((() => { const s = el("span"); s.appendChild(document.createTextNode("Sınıfa tıkla")); return s; })());
+    const k1 = el("span"); k1.innerHTML = "<kbd>/</kbd> ara"; hint.appendChild(k1);
+    const k2 = el("span"); k2.innerHTML = "<kbd>Esc</kbd> temizle"; hint.appendChild(k2);
+    const k3 = el("span"); k3.innerHTML = "<kbd>Enter</kbd> ilk sonuç"; hint.appendChild(k3);
+    wrap.appendChild(hint);
+  }
+
+  function splitName(full) {
+    // "Halil İbrahim Eriş" → first="Halil İbrahim", last="Eriş"
+    const parts = (full || "").trim().split(/\s+/);
+    if (parts.length <= 1) return { first: full || "", last: "" };
+    return { first: parts.slice(0, -1).join(" "), last: parts[parts.length - 1] };
   }
 
   function show(cls) {
     const url = new URL(location.href);
     url.searchParams.set("sinif", cls);
     history.replaceState(null, "", url);
-    renderPills(document.getElementById("q").value);
+    renderGroups(document.getElementById("q").value);
 
-    const title = document.getElementById("sinif-title");
     const content = document.getElementById("content");
     clear(content);
-    title.style.display = "block";
-    clear(title);
-    title.appendChild(document.createTextNode(cls));
+
+    const kademe = classKademe(cls);
+    const detail = el("div", { className: "sinif-detail" });
+
+    detail.appendChild(el("div", { className: "detail-eyebrow", text: KADEME_LABEL[kademe] || kademe }));
+
+    const head = el("div", { className: "detail-head" });
+    head.appendChild(el("div", {
+      className: "detail-title",
+      style: "color: var(--" + kademe + ");",
+      text: cls,
+    }));
+
     const ls = lessonsFor(cls);
-    title.appendChild(el("span", { className: "hint", text: ls.length + " ders / hafta" }));
+    const meta = el("div", { className: "detail-meta" });
+    meta.appendChild(document.createTextNode("Haftalık "));
+    meta.appendChild(el("strong", { text: ls.length + " ders" }));
+    const days = new Set(ls.map(l => l.gun)).size;
+    if (days) {
+      meta.appendChild(document.createTextNode(" · "));
+      meta.appendChild(el("strong", { text: days + " gün" }));
+    }
+    head.appendChild(meta);
+    detail.appendChild(head);
 
     if (!ls.length) {
-      content.appendChild(el("div", { className: "card empty", text: "Bu sınıf için ders kaydı yok" }));
+      detail.appendChild(emptyState("📭", "Bu sınıf için ders kaydı yok", "Programda henüz tanımlı değil"));
+      content.appendChild(detail);
       return;
     }
 
@@ -159,22 +581,48 @@
       if (!byDay.has(l.gun)) byDay.set(l.gun, []);
       byDay.get(l.gun).push(l);
     }
+
+    const timeline = el("div", { className: "day-timeline" });
+    const today = todayGun();
     for (let g = 1; g <= 5; g++) {
       const day = byDay.get(g);
       if (!day || !day.length) continue;
-      const section = el("div", { className: "day" });
-      section.appendChild(el("div", { className: "day-name", text: GUN_AD[g] }));
-      const chips = el("div", { className: "chips" });
+      const block = el("div", { className: "day-block" + (g === today ? " today" : "") });
+      const dayLabel = el("div", { className: "day-label" });
+      if (g === today) dayLabel.appendChild(el("span", { className: "today-dot", attrs: { "aria-hidden": "true" } }));
+      dayLabel.appendChild(document.createTextNode(GUN_AD[g]));
+      block.appendChild(dayLabel);
+
+      const lessons = el("div", { className: "day-lessons" });
       for (const l of day) {
-        const chip = el("span", { className: "chip k-" + l.kademe, style: "color: var(--" + l.kademe + ");" });
-        chip.appendChild(el("span", { className: "t", text: l.bas }));
-        chip.appendChild(document.createTextNode((teacherById[l.teacherId] && teacherById[l.teacherId].name.split(" ").slice(-1)[0]) || ""));
-        if (l.lab) chip.appendChild(el("span", { className: "lb", text: l.lab }));
-        chips.appendChild(chip);
+        const row = el("div", {
+          className: "lesson-row k-" + l.kademe,
+          style: "color: var(--" + l.kademe + ");",
+        });
+        row.appendChild(el("div", { className: "lesson-time", text: l.bas + "—" + l.bit }));
+        const t = teacherById[l.teacherId];
+        const name = t ? t.name : "?";
+        const { first, last } = splitName(name);
+        const teacherEl = el("div", { className: "lesson-teacher" });
+        teacherEl.appendChild(document.createTextNode(first));
+        if (last) {
+          teacherEl.appendChild(document.createTextNode(" "));
+          teacherEl.appendChild(el("span", { className: "surname", text: last }));
+        }
+        row.appendChild(teacherEl);
+        if (l.lab) row.appendChild(el("div", { className: "lesson-lab", text: l.lab + " Lab" }));
+        lessons.appendChild(row);
       }
-      section.appendChild(chips);
-      content.appendChild(section);
+      block.appendChild(lessons);
+      timeline.appendChild(block);
     }
+    detail.appendChild(timeline);
+    content.appendChild(detail);
+
+    // Smooth scroll into view on selection
+    setTimeout(() => {
+      detail.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 40);
   }
 
   async function load() {
@@ -184,18 +632,55 @@
     } catch {}
     if (!data) {
       document.getElementById("content").appendChild(
-        el("div", { className: "card empty", text: "Veri yüklenemedi — /api/schedules erişilemiyor." })
+        emptyState("⚠️", "Veri yüklenemedi", "/api/schedules erişilemiyor — bağlantıyı kontrol edin")
       );
       return;
     }
     teacherById = Object.fromEntries((data.teachers || []).map(t => [t.id, t]));
-    renderPills("");
+    renderGroups("");
     const url = new URL(location.href);
     const init = url.searchParams.get("sinif");
     if (init) show(init);
   }
 
-  document.getElementById("q").addEventListener("input", (e) => renderPills(e.target.value));
+  const input = document.getElementById("q");
+  const clearBtn = document.getElementById("q-clear");
+  const searchWrap = document.getElementById("search-wrap");
+
+  input.addEventListener("input", (e) => {
+    renderGroups(e.target.value);
+    searchWrap.classList.toggle("has-value", !!e.target.value);
+  });
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      input.value = "";
+      renderGroups("");
+      searchWrap.classList.remove("has-value");
+      input.blur();
+    }
+    if (e.key === "Enter") {
+      const firstPill = document.querySelector(".class-pill");
+      if (firstPill) firstPill.click();
+    }
+  });
+  clearBtn.addEventListener("click", () => {
+    input.value = "";
+    renderGroups("");
+    searchWrap.classList.remove("has-value");
+    input.focus();
+  });
+
+  // Global "/" focuses search when nothing else is focused
+  document.addEventListener("keydown", (e) => {
+    const ae = document.activeElement;
+    const inField = ae && (ae.tagName === "INPUT" || ae.tagName === "TEXTAREA" || ae.isContentEditable);
+    if (e.key === "/" && !inField) {
+      e.preventDefault();
+      input.focus();
+      input.select();
+    }
+  });
+
   load();
 })();
 </script>
