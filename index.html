@@ -2,81 +2,837 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<meta name="theme-color" content="#0f1115" />
-<title>Bilnet Balıkesir – BT Ders Programları</title>
-<link rel="stylesheet" href="assets/style.css" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="theme-color" content="#0a0b12" />
+<title>Bilnet Balıkesir · Bilişim Teknolojileri</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700;800&display=swap" />
+<style>
+  :root {
+    --bg: #0a0b12;
+    --surface: #11131d;
+    --surface-2: #181b28;
+    --surface-3: #212535;
+    --line: #262a3a;
+    --line-soft: #1a1e2c;
+    --text: #f0f2f7;
+    --muted: #868ca3;
+    --faint: #474d62;
+
+    --anaokulu: #f5c84c;
+    --ilkokul:  #4ade80;
+    --ortaokul: #60a5fa;
+    --lise:     #fb7185;
+    --toplanti: #fb923c;
+    --amazing:  #c084fc;
+    --accent:   #fbbf24;
+
+    --lab-i: #34d399;
+    --lab-o: #60a5fa;
+    --lab-l: #fb7185;
+
+    --font-display: 'Instrument Serif', ui-serif, Georgia, serif;
+    --font-body: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, 'Menlo', monospace;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); }
+  body {
+    font-family: var(--font-body);
+    min-height: 100dvh;
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.45;
+    overflow-x: hidden;
+  }
+
+  /* Ambient background gradient mesh */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(800px 500px at 15% 5%, rgba(52, 211, 153, 0.06), transparent 60%),
+      radial-gradient(900px 500px at 85% 10%, rgba(96, 165, 250, 0.05), transparent 60%),
+      radial-gradient(700px 400px at 50% 90%, rgba(251, 113, 133, 0.04), transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  a { color: inherit; text-decoration: none; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+
+  .page {
+    position: relative;
+    z-index: 1;
+    max-width: 1040px;
+    margin: 0 auto;
+    padding: 28px clamp(16px, 4vw, 32px) 60px;
+  }
+
+  /* ---------- Top ---------- */
+  .top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 22px;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .brand::before {
+    content: "";
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent);
+    animation: breathe 2.4s ease-in-out infinite;
+  }
+  @keyframes breathe { 0%,100%{opacity:0.5} 50%{opacity:1} }
+
+  .clock-box {
+    text-align: right;
+    line-height: 1.1;
+  }
+  .clock-val {
+    font-family: var(--font-mono);
+    font-size: clamp(16px, 2.5vw, 20px);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    font-variant-numeric: tabular-nums;
+    color: var(--text);
+  }
+  .clock-date {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    margin-top: 3px;
+  }
+
+  /* ---------- Hero ---------- */
+  .hero {
+    padding: 14px 0 28px;
+    margin-bottom: 24px;
+    border-bottom: 1px solid var(--line-soft);
+    animation: rise 600ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .hero-eyebrow {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--accent);
+    font-weight: 700;
+    margin-bottom: 12px;
+  }
+  .hero-title {
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: clamp(42px, 8vw, 80px);
+    line-height: 0.95;
+    letter-spacing: -0.035em;
+    margin: 0 0 10px;
+    color: var(--text);
+  }
+  .hero-title em {
+    font-style: italic;
+    color: var(--accent);
+  }
+  .hero-sub {
+    color: var(--muted);
+    font-size: clamp(14px, 1.6vw, 16px);
+    max-width: 540px;
+    line-height: 1.55;
+    margin: 0;
+  }
+
+  /* ---------- Live lab strip ---------- */
+  .labs-strip {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 34px;
+  }
+  @media (max-width: 640px) {
+    .labs-strip { grid-template-columns: 1fr; gap: 8px; }
+  }
+  .lab-live {
+    --col: var(--muted);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--col);
+    border-radius: 12px;
+    padding: 12px 14px;
+    display: grid;
+    grid-template-columns: 32px 1fr auto;
+    gap: 12px;
+    align-items: center;
+    transition: border-color 200ms, transform 200ms;
+  }
+  .lab-live[data-lab="i"] { --col: var(--lab-i); }
+  .lab-live[data-lab="O"] { --col: var(--lab-o); }
+  .lab-live[data-lab="L"] { --col: var(--lab-l); }
+  .lab-live:hover { transform: translateY(-1px); border-color: color-mix(in srgb, var(--col) 40%, var(--line)); }
+  .lab-badge {
+    width: 32px; height: 32px;
+    display: grid; place-items: center;
+    background: color-mix(in srgb, var(--col) 18%, transparent);
+    border: 1px solid color-mix(in srgb, var(--col) 40%, transparent);
+    color: var(--col);
+    border-radius: 8px;
+    font-family: var(--font-mono);
+    font-size: 14px;
+    font-weight: 700;
+  }
+  .lab-live-content { min-width: 0; }
+  .lab-live-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 3px;
+  }
+  .lab-live-name {
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: -0.005em;
+  }
+  .lab-live-dot {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .lab-live-dot::before {
+    content: "";
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--muted);
+  }
+  .lab-live.live .lab-live-dot { color: var(--col); }
+  .lab-live.live .lab-live-dot::before {
+    background: var(--col);
+    box-shadow: 0 0 6px var(--col);
+    animation: blink 1.8s ease-in-out infinite;
+  }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.4} }
+  .lab-live-status {
+    font-size: 13px;
+    color: var(--text);
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .lab-live.empty .lab-live-status { color: var(--muted); font-weight: 400; }
+  .lab-live-link {
+    color: var(--muted);
+    font-size: 16px;
+    transition: color 140ms, transform 140ms;
+  }
+  .lab-live:hover .lab-live-link { color: var(--col); transform: translateX(2px); }
+
+  /* ---------- Section ---------- */
+  .section {
+    margin-bottom: 36px;
+  }
+  .section-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    padding-bottom: 14px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .section-title {
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-style: italic;
+    font-size: clamp(24px, 3.2vw, 32px);
+    letter-spacing: -0.02em;
+    line-height: 1;
+    margin: 0;
+  }
+  .section-count {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+  }
+
+  /* ---------- Teacher cards ---------- */
+  .teacher-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+  }
+  @media (max-width: 640px) {
+    .teacher-grid { grid-template-columns: 1fr; }
+  }
+
+  .teacher-card {
+    display: grid;
+    grid-template-columns: 52px 1fr auto;
+    gap: 14px;
+    align-items: center;
+    padding: 18px 20px;
+    background: linear-gradient(180deg, var(--surface), var(--surface-2));
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    transition: border-color 220ms, transform 220ms, box-shadow 220ms;
+    position: relative;
+    overflow: hidden;
+    animation: card-in 500ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  }
+  .teacher-card:nth-child(1) { animation-delay: 80ms; }
+  .teacher-card:nth-child(2) { animation-delay: 140ms; }
+  .teacher-card:nth-child(3) { animation-delay: 200ms; }
+  .teacher-card:nth-child(4) { animation-delay: 260ms; }
+  @keyframes card-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .teacher-card::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 14px;
+    background: radial-gradient(280px 180px at 100% 0%, rgba(251, 191, 36, 0.06), transparent 60%);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 240ms;
+  }
+  .teacher-card:hover {
+    border-color: color-mix(in srgb, var(--accent) 38%, var(--line));
+    transform: translateY(-2px);
+    box-shadow: 0 18px 40px -20px color-mix(in srgb, var(--accent) 35%, transparent);
+  }
+  .teacher-card:hover::after { opacity: 1; }
+  .teacher-card.teaching {
+    border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+  }
+
+  .t-avatar {
+    width: 52px; height: 52px;
+    border-radius: 14px;
+    display: grid;
+    place-items: center;
+    background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 38%, transparent), var(--surface-3));
+    border: 1px solid color-mix(in srgb, var(--accent) 32%, transparent);
+    color: var(--accent);
+    font-weight: 700;
+    font-size: 17px;
+    letter-spacing: -0.01em;
+    flex-shrink: 0;
+    font-family: var(--font-body);
+  }
+  .teacher-card.teaching .t-avatar {
+    background: var(--accent);
+    color: #1a1205;
+    border-color: var(--accent);
+    animation: avatar-glow 2.4s ease-in-out infinite;
+  }
+  @keyframes avatar-glow {
+    0%,100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 40%, transparent); }
+    50%     { box-shadow: 0 0 0 10px transparent; }
+  }
+
+  .t-info { min-width: 0; }
+  .t-name {
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    line-height: 1.2;
+    margin-bottom: 4px;
+  }
+  .t-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 10px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.02em;
+  }
+  .t-meta .now-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 2px 8px;
+    background: color-mix(in srgb, var(--accent) 20%, transparent);
+    border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+    border-radius: 5px;
+    color: var(--accent);
+    font-weight: 700;
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+  .t-meta .now-chip::before {
+    content: "";
+    width: 5px; height: 5px; border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 6px var(--accent);
+  }
+  .t-meta .free {
+    color: var(--muted);
+  }
+  .t-meta .absent {
+    color: var(--lise);
+    font-weight: 600;
+  }
+
+  .t-arrow {
+    color: var(--muted);
+    font-size: 22px;
+    line-height: 1;
+    transition: color 200ms, transform 200ms;
+    flex-shrink: 0;
+  }
+  .teacher-card:hover .t-arrow { color: var(--accent); transform: translateX(3px); }
+
+  /* ---------- Tool cards ---------- */
+  .tool-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 12px;
+  }
+  .tool-card {
+    display: grid;
+    grid-template-columns: 44px 1fr;
+    gap: 14px;
+    align-items: center;
+    padding: 16px 18px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    transition: border-color 200ms, transform 200ms;
+    position: relative;
+  }
+  .tool-card:hover {
+    border-color: color-mix(in srgb, var(--accent) 30%, var(--line));
+    transform: translateY(-1px);
+  }
+  .tool-icon {
+    width: 44px; height: 44px;
+    border-radius: 11px;
+    display: grid;
+    place-items: center;
+    background: var(--surface-3);
+    border: 1px solid var(--line);
+    color: var(--accent);
+    flex-shrink: 0;
+  }
+  .tool-icon svg { width: 20px; height: 20px; }
+  .tool-name {
+    font-weight: 700;
+    font-size: 14px;
+    letter-spacing: -0.005em;
+    margin-bottom: 2px;
+  }
+  .tool-sub {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+  }
+
+  /* ---------- Footer ---------- */
+  .footer {
+    margin-top: 48px;
+    padding: 18px 0 0;
+    border-top: 1px solid var(--line-soft);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    color: var(--faint);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+  .footer a {
+    color: var(--muted);
+    padding: 6px 10px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    transition: color 160ms, border-color 160ms;
+  }
+  .footer a:hover {
+    color: var(--accent);
+    border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  }
+
+  /* ---------- Small screen tweaks ---------- */
+  @media (max-width: 480px) {
+    .page { padding: 20px 14px 50px; }
+    .hero { padding: 10px 0 22px; margin-bottom: 20px; }
+    .teacher-card { padding: 14px 16px; gap: 12px; grid-template-columns: 44px 1fr auto; }
+    .t-avatar { width: 44px; height: 44px; font-size: 15px; border-radius: 11px; }
+    .t-name { font-size: 15px; }
+    .t-meta { font-size: 10px; gap: 3px 8px; }
+    .tool-card { padding: 14px; gap: 12px; grid-template-columns: 40px 1fr; }
+    .tool-icon { width: 40px; height: 40px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  }
+</style>
 </head>
 <body>
-<div class="wrap">
-  <header class="top">
-    <div class="teacher-name">Bilnet Balıkesir</div>
-    <div class="landing-title">Bilişim Teknolojileri</div>
-    <div class="landing-sub">Öğretmen ders programları</div>
-  </header>
 
-  <a class="teacher-card" href="emre.html">
-    <div class="teacher-card-name">
-      <span>Emre Günay</span>
-      <span class="teacher-card-arrow">›</span>
+<div class="page">
+
+  <div class="top-bar">
+    <span class="brand">Bilnet Balıkesir · BT</span>
+    <div class="clock-box">
+      <div class="clock-val" id="clock">--:--:--</div>
+      <div class="clock-date" id="date">—</div>
     </div>
-    <div class="teacher-card-meta">Anaokulu · İlkokul · Ortaokul</div>
-  </a>
+  </div>
 
-  <a class="teacher-card" href="halil.html">
-    <div class="teacher-card-name">
-      <span>Halil İbrahim Eriş</span>
-      <span class="teacher-card-arrow">›</span>
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-eyebrow">Bilişim Teknolojileri</div>
+    <h1 class="hero-title">Ders programı <em>ve</em><br/>laboratuvar panosu</h1>
+    <p class="hero-sub">Öğretmen ve lab programlarını canlı takip et, gelmeyen hocaların derslerini başka öğretmenlere devret, boş saatlerini gör.</p>
+  </section>
+
+  <!-- Live lab strip -->
+  <section class="labs-strip" id="labs-strip">
+    <a class="lab-live" data-lab="i" href="labs.html" aria-label="İlkokul Lab müsaitlik">
+      <div class="lab-badge">İ</div>
+      <div class="lab-live-content">
+        <div class="lab-live-head">
+          <span class="lab-live-name">İlkokul Lab</span>
+          <span class="lab-live-dot" data-k="i">—</span>
+        </div>
+        <div class="lab-live-status" data-s="i">yükleniyor…</div>
+      </div>
+      <span class="lab-live-link">›</span>
+    </a>
+    <a class="lab-live" data-lab="O" href="labs.html" aria-label="Ortaokul Lab müsaitlik">
+      <div class="lab-badge">O</div>
+      <div class="lab-live-content">
+        <div class="lab-live-head">
+          <span class="lab-live-name">Ortaokul Lab</span>
+          <span class="lab-live-dot" data-k="O">—</span>
+        </div>
+        <div class="lab-live-status" data-s="O">yükleniyor…</div>
+      </div>
+      <span class="lab-live-link">›</span>
+    </a>
+    <a class="lab-live" data-lab="L" href="labs.html" aria-label="Lise Lab müsaitlik">
+      <div class="lab-badge">L</div>
+      <div class="lab-live-content">
+        <div class="lab-live-head">
+          <span class="lab-live-name">Lise Lab</span>
+          <span class="lab-live-dot" data-k="L">—</span>
+        </div>
+        <div class="lab-live-status" data-s="L">yükleniyor…</div>
+      </div>
+      <span class="lab-live-link">›</span>
+    </a>
+  </section>
+
+  <!-- Teachers -->
+  <section class="section">
+    <div class="section-head">
+      <h2 class="section-title">Öğretmenler</h2>
+      <span class="section-count" id="teacher-count">—</span>
     </div>
-    <div class="teacher-card-meta">Ortaokul · Lise</div>
-  </a>
-
-  <a class="teacher-card" href="imge.html">
-    <div class="teacher-card-name">
-      <span>İmge Özgencil</span>
-      <span class="teacher-card-arrow">›</span>
+    <div class="teacher-grid" id="teacher-grid">
+      <!-- Fallback cards — replaced by JS once API loads -->
+      <a class="teacher-card" href="emre.html">
+        <div class="t-avatar">EG</div>
+        <div class="t-info">
+          <div class="t-name">Emre Günay</div>
+          <div class="t-meta"><span>Anaokulu · İlkokul · Ortaokul</span></div>
+        </div>
+        <span class="t-arrow">›</span>
+      </a>
+      <a class="teacher-card" href="halil.html">
+        <div class="t-avatar">Hİ</div>
+        <div class="t-info">
+          <div class="t-name">Halil İbrahim Eriş</div>
+          <div class="t-meta"><span>Ortaokul · Lise</span></div>
+        </div>
+        <span class="t-arrow">›</span>
+      </a>
+      <a class="teacher-card" href="imge.html">
+        <div class="t-avatar">İÖ</div>
+        <div class="t-info">
+          <div class="t-name">İmge Özgencil</div>
+          <div class="t-meta"><span>İlkokul</span></div>
+        </div>
+        <span class="t-arrow">›</span>
+      </a>
+      <a class="teacher-card" href="yunus.html">
+        <div class="t-avatar">MY</div>
+        <div class="t-info">
+          <div class="t-name">M. Yunus Toprak</div>
+          <div class="t-meta"><span>İlkokul · Ortaokul · Lise</span></div>
+        </div>
+        <span class="t-arrow">›</span>
+      </a>
     </div>
-    <div class="teacher-card-meta">İlkokul</div>
-  </a>
+  </section>
 
-  <a class="teacher-card" href="yunus.html">
-    <div class="teacher-card-name">
-      <span>M. Yunus Toprak</span>
-      <span class="teacher-card-arrow">›</span>
+  <!-- Tools -->
+  <section class="section">
+    <div class="section-head">
+      <h2 class="section-title">Araçlar</h2>
     </div>
-    <div class="teacher-card-meta">İlkokul · Ortaokul · Lise</div>
-  </a>
-
-  <h2 class="section-title">Araçlar</h2>
-  <a class="teacher-card" href="labs.html">
-    <div class="teacher-card-name">
-      <span>Laboratuvar Müsaitlik</span>
-      <span class="teacher-card-arrow">›</span>
+    <div class="tool-grid">
+      <a class="tool-card" href="labs.html">
+        <div class="tool-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2v7.31"/><path d="M15 2v7.31"/><path d="M5.76 2h12.48"/><path d="M9 9.31L4.5 17.69A2 2 0 0 0 6.26 20.5h11.48a2 2 0 0 0 1.76-2.81L15 9.31"/></svg>
+        </div>
+        <div>
+          <div class="tool-name">Lab Boş Saatleri</div>
+          <div class="tool-sub">İ / O / L müsaitlik</div>
+        </div>
+      </a>
+      <a class="tool-card" href="sinif.html">
+        <div class="tool-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        </div>
+        <div>
+          <div class="tool-name">Sınıf Ara</div>
+          <div class="tool-sub">4/A, 6B, KAPLAN…</div>
+        </div>
+      </a>
+      <a class="tool-card" href="kiosk.html">
+        <div class="tool-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        </div>
+        <div>
+          <div class="tool-name">Kiosk Panosu</div>
+          <div class="tool-sub">Koridor ekranı</div>
+        </div>
+      </a>
     </div>
-    <div class="teacher-card-meta">i / O / L lab'larının haftalık boş saatleri</div>
-  </a>
+  </section>
 
-  <a class="teacher-card" href="sinif.html">
-    <div class="teacher-card-name">
-      <span>Sınıf Programı</span>
-      <span class="teacher-card-arrow">›</span>
-    </div>
-    <div class="teacher-card-meta">Sınıfa göre haftalık program ara</div>
-  </a>
-
-  <a class="teacher-card" href="kiosk.html">
-    <div class="teacher-card-name">
-      <span>Kiosk · Lab Panosu</span>
-      <span class="teacher-card-arrow">›</span>
-    </div>
-    <div class="teacher-card-meta">Hol/koridor için büyük ekran modu</div>
-  </a>
-
-  <footer>
-    Bilnet Balıkesir · Bilişim Teknolojileri
-    <br/>
-    <a href="admin-login.html" style="font-size:11px; opacity:0.6; letter-spacing:0.12em; text-transform:uppercase;">Admin</a>
+  <footer class="footer">
+    <span>Bilnet Balıkesir · Bilişim Teknolojileri</span>
+    <a href="admin-login.html">Admin</a>
   </footer>
+
 </div>
+
+<script>
+(function () {
+  const GUN_AD = ["Pazar","Pazartesi","Salı","Çarşamba","Perşembe","Cuma","Cumartesi"];
+  const AY_AD  = ["Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık"];
+
+  function pad(n) { return String(n).padStart(2, "0"); }
+  function parseHM(s) { const [h, m] = s.split(":").map(Number); return h * 60 + m; }
+  function fmtClock(d) { return pad(d.getHours()) + ":" + pad(d.getMinutes()) + ":" + pad(d.getSeconds()); }
+  function fmtDate(d) { return GUN_AD[d.getDay()] + " · " + d.getDate() + " " + AY_AD[d.getMonth()]; }
+  function todayGun(d) { return (d.getDay() >= 1 && d.getDay() <= 5) ? d.getDay() : null; }
+  function nowMin(d) { return d.getHours()*60 + d.getMinutes() + d.getSeconds()/60; }
+  function initials(name) {
+    if (!name) return "?";
+    return name.split(/\s+/).map(p => p[0] || "").join("").slice(0, 2).toUpperCase();
+  }
+
+  function el(tag, opts, ...children) {
+    const e = document.createElement(tag);
+    if (opts) {
+      if (opts.className) e.className = opts.className;
+      if (opts.text != null) e.textContent = opts.text;
+      if (opts.attrs) for (const k in opts.attrs) e.setAttribute(k, opts.attrs[k]);
+      if (opts.style) e.setAttribute("style", opts.style);
+    }
+    for (const c of children) {
+      if (c == null) continue;
+      if (typeof c === "string") e.appendChild(document.createTextNode(c));
+      else e.appendChild(c);
+    }
+    return e;
+  }
+
+  let apiData = null;
+
+  function tickClock() {
+    const d = new Date();
+    document.getElementById("clock").textContent = fmtClock(d);
+    document.getElementById("date").textContent = fmtDate(d);
+  }
+
+  function isLessonActive(lesson, today, nowM, gun) {
+    if (lesson.gun !== gun) return false;
+    if (lesson.onlyOn && lesson.onlyOn !== today) return false;
+    if (Array.isArray(lesson.cancelledOn) && lesson.cancelledOn.includes(today)) return false;
+    if (Array.isArray(lesson.transferredOn) && lesson.transferredOn.some(x => x.date === today)) return false;
+    return parseHM(lesson.bas) <= nowM && nowM < parseHM(lesson.bit);
+  }
+
+  function isLessonToday(lesson, today, gun) {
+    if (lesson.gun !== gun) return false;
+    if (lesson.onlyOn && lesson.onlyOn !== today) return false;
+    if (Array.isArray(lesson.cancelledOn) && lesson.cancelledOn.includes(today)) return false;
+    if (Array.isArray(lesson.transferredOn) && lesson.transferredOn.some(x => x.date === today)) return false;
+    return true;
+  }
+
+  // ---------- Live labs strip ----------
+  function renderLabs() {
+    if (!apiData) return;
+    const d = new Date();
+    const gun = todayGun(d);
+    const m = nowMin(d);
+    const teachers = Object.fromEntries((apiData.teachers || []).map(t => [t.id, t]));
+    const today = apiData.date;
+
+    for (const labKey of ["i", "O", "L"]) {
+      const dotEl = document.querySelector('[data-k="' + labKey + '"]');
+      const statusEl = document.querySelector('[data-s="' + labKey + '"]');
+      const cardEl = document.querySelector('.lab-live[data-lab="' + labKey + '"]');
+      if (!dotEl || !statusEl || !cardEl) continue;
+
+      const todayLessons = (apiData.lessons || [])
+        .filter(l => l.lab === labKey && isLessonToday(l, today, gun))
+        .sort((a, b) => parseHM(a.bas) - parseHM(b.bas));
+
+      if (!gun) {
+        dotEl.textContent = "Kapalı";
+        statusEl.textContent = "Hafta sonu";
+        cardEl.classList.remove("live");
+        cardEl.classList.add("empty");
+        continue;
+      }
+
+      const current = todayLessons.find(l => isLessonActive(l, today, m, gun));
+      if (current) {
+        const teacher = teachers[current.teacherId];
+        dotEl.textContent = "Canlı";
+        statusEl.textContent = current.ad + (teacher ? " · " + teacher.name.split(/\s+/).slice(-1)[0] : "");
+        cardEl.classList.add("live");
+        cardEl.classList.remove("empty");
+        continue;
+      }
+
+      const next = todayLessons.find(l => parseHM(l.bas) > m);
+      if (next) {
+        const diff = Math.ceil(parseHM(next.bas) - m);
+        const teacher = teachers[next.teacherId];
+        dotEl.textContent = diff + " dk";
+        statusEl.textContent = "Teneffüs · " + next.bas + " " + next.ad + (teacher ? " (" + teacher.name.split(/\s+/).slice(-1)[0] + ")" : "");
+      } else {
+        if (!todayLessons.length) {
+          dotEl.textContent = "Boş";
+          statusEl.textContent = "Bugün ders yok";
+        } else {
+          dotEl.textContent = "Bitti";
+          statusEl.textContent = "Bugünkü dersler tamamlandı";
+        }
+      }
+      cardEl.classList.remove("live");
+      cardEl.classList.add("empty");
+    }
+  }
+
+  // ---------- Teachers ----------
+  function renderTeachers() {
+    if (!apiData) return;
+    const grid = document.getElementById("teacher-grid");
+    const d = new Date();
+    const gun = todayGun(d);
+    const m = nowMin(d);
+    const today = apiData.date;
+
+    const teachers = apiData.teachers || [];
+    document.getElementById("teacher-count").textContent = teachers.length + " kişi";
+
+    // Clear & render
+    while (grid.firstChild) grid.removeChild(grid.firstChild);
+
+    // Sort: teaching-now first, then alphabetical
+    const enriched = teachers.map(t => {
+      const mine = (apiData.lessons || []).filter(l => l.teacherId === t.id);
+      const todayCount = mine.filter(l => isLessonToday(l, today, gun)).length;
+      const current = gun ? mine.find(l => isLessonActive(l, today, m, gun)) : null;
+      // Has any absence today → they're away
+      const abs = (apiData.absences || []).find(a => a.date === today && a.teacherId === t.id);
+      return { t, todayCount, current, absent: !!abs };
+    });
+    enriched.sort((a, b) => {
+      if (a.current && !b.current) return -1;
+      if (!a.current && b.current) return 1;
+      return a.t.name.localeCompare(b.t.name, "tr");
+    });
+
+    for (const { t, todayCount, current, absent } of enriched) {
+      const card = el("a", { className: "teacher-card" + (current ? " teaching" : ""), attrs: { href: "/" + t.slug + ".html" } });
+      card.appendChild(el("div", { className: "t-avatar", text: initials(t.name) }));
+      const info = el("div", { className: "t-info" });
+      info.appendChild(el("div", { className: "t-name", text: t.name }));
+      const meta = el("div", { className: "t-meta" });
+      if (current) {
+        meta.appendChild(el("span", { className: "now-chip", text: current.ad + " · Derste" }));
+      } else if (absent) {
+        meta.appendChild(el("span", { className: "absent", text: "● Bugün yok" }));
+      } else if (!gun) {
+        meta.appendChild(el("span", { className: "free", text: "Hafta sonu" }));
+      } else {
+        const label = todayCount ? (todayCount + " ders bugün") : "Bugün ders yok";
+        meta.appendChild(el("span", { className: "free", text: label }));
+        if (t.meta) meta.appendChild(el("span", { text: "· " + t.meta }));
+      }
+      info.appendChild(meta);
+      card.appendChild(info);
+      card.appendChild(el("span", { className: "t-arrow", text: "›" }));
+      grid.appendChild(card);
+    }
+  }
+
+  async function fetchAll() {
+    try {
+      const r = await fetch("/api/schedules/today", { credentials: "same-origin", cache: "no-store" });
+      if (!r.ok) return;
+      apiData = await r.json();
+      renderLabs();
+      renderTeachers();
+    } catch {}
+  }
+
+  tickClock();
+  setInterval(tickClock, 1000);
+  fetchAll();
+  setInterval(fetchAll, 30 * 1000);
+  // Re-render live strip every second so countdown stays fresh
+  setInterval(() => { if (apiData) { renderLabs(); renderTeachers(); } }, 15 * 1000);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") fetchAll();
+  });
+})();
+</script>
 </body>
 </html>
