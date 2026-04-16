@@ -1,5 +1,6 @@
 (window.ALL_SCHEDULES = window.ALL_SCHEDULES || []);
 window.SCHEDULE = {
+  slug: "imge",
   teacher: "İmge Özgencil",
   program: [
     // Pazartesi

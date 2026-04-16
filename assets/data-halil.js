@@ -1,5 +1,6 @@
 (window.ALL_SCHEDULES = window.ALL_SCHEDULES || []);
 window.SCHEDULE = {
+  slug: "halil",
   teacher: "Halil İbrahim Eriş",
   program: [
     // Salı (ortaokul saatleri, 35 dk)
